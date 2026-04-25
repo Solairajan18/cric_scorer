@@ -64,22 +64,26 @@ export default function MatchPage() {
   const innings = match ? getCurrentInnings(match) : null;
   const incomingBatters = useMemo(() => (match ? getEligibleIncomingBatters(match) : []), [match]);
 
-  useEffect(() => {
-    if (!match) return;
-
-    const currentInnings = getCurrentInnings(match);
-    if ((match.status === "innings_break" || currentInnings.awaitingBowlerChange) && openSheet !== "bowler") {
-      setOpenSheet("bowler");
-    }
-  }, [match, openSheet]);
+  // Track if we've already auto-opened the bowler sheet for the current state
+  const [autoOpenedKey, setAutoOpenedKey] = useState<string>("");
 
   useEffect(() => {
     if (!match || !innings) return;
+
+    // Create a unique key for the state that requires a bowler
+    const isAwaiting = innings.awaitingBowlerChange || match.status === "innings_break";
+    const stateKey = isAwaiting ? `${match.status}-${innings.legalBalls}-${match.currentInnings}` : "";
+    
+    if (isAwaiting && autoOpenedKey !== stateKey) {
+      setOpenSheet("bowler");
+      setAutoOpenedKey(stateKey);
+    }
+
     setWideDismissed(innings.strikerId);
     setNoBallDismissed(innings.strikerId);
     setWicketDismissed(innings.strikerId);
     setPlayIncoming(getEligibleIncomingBatters(match)[0]?.id ?? "");
-  }, [match, innings?.strikerId, innings?.nonStrikerId]);
+  }, [match, innings?.strikerId, innings?.nonStrikerId, innings?.legalBalls, innings?.awaitingBowlerChange]);
 
   if (loading) {
     return <main className="mx-auto max-w-4xl p-6 text-slate-600">Loading match...</main>;
@@ -133,7 +137,7 @@ export default function MatchPage() {
   function submitWide() {
     const outcome: BallOutcome = {
       type: "wide",
-      totalExtras: 1 + wideExtras,
+      totalExtras: currentMatch.rules.wideRuns + wideExtras,
       wicket: wideWicket,
       wicketType: wideWicket ? wideWicketType : undefined,
       dismissedPlayerId: wideWicket ? wideDismissed : undefined,
@@ -149,7 +153,7 @@ export default function MatchPage() {
     const outcome: BallOutcome = {
       type: "no_ball",
       batRuns: noBallBatRuns,
-      extraRuns: noBallExtraRuns,
+      extraRuns: currentMatch.rules.noBallRuns,
       wicket: noBallWicket,
       wicketType: noBallWicket ? "run_out" : undefined,
       dismissedPlayerId: noBallWicket ? noBallDismissed : undefined,
@@ -221,22 +225,6 @@ export default function MatchPage() {
 
           <Scoreboard match={currentMatch} />
 
-          {/* Tab Switcher */}
-          <div className="flex p-1 bg-slate-100 rounded-xl">
-            <button 
-              onClick={() => setActiveTab("scoring")}
-              className={`flex-1 py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition ${activeTab === "scoring" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
-            >
-              Scoring
-            </button>
-            <button 
-              onClick={() => setActiveTab("scorecard")}
-              className={`flex-1 py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition ${activeTab === "scorecard" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
-            >
-              Scorecard
-            </button>
-          </div>
-
           {activeTab === "scoring" ? (
             <div className="space-y-3">
               <PlayerPanel match={currentMatch} onBatsmanClick={openBatsmanSheet} onBowlerClick={() => setOpenSheet("bowler")} />
@@ -262,7 +250,17 @@ export default function MatchPage() {
           )}
         </div>
       </main>
-      <BottomNav active="live" />
+      <BottomNav 
+        active={activeTab === "scoring" ? "live" : "scorecard"} 
+        onTabChange={(key) => {
+          if (key === "live") setActiveTab("scoring");
+          if (key === "scorecard") setActiveTab("scorecard");
+          if (key === "summary") {
+            // Summary usually goes to the report page
+            window.location.href = `/m/${currentMatch.id}/report`;
+          }
+        }} 
+      />
 
       <BottomSheet open={openSheet === "wide"} title="Wide details" onClose={() => setOpenSheet(null)}>
         <div className="space-y-4">
@@ -313,10 +311,10 @@ export default function MatchPage() {
               ))}
             </div>
           </div>
-          <label className="space-y-2 text-sm text-slate-700">
-            <span className="font-medium">Total extra runs</span>
-            <input type="number" min={1} max={5} value={noBallExtraRuns} onChange={(event) => setNoBallExtraRuns(Math.max(1, Math.min(5, Number(event.target.value) || 1)))} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none" />
-          </label>
+          <p className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600 border border-slate-200 italic">
+            Penalty: +{currentMatch.rules.noBallRuns} {currentMatch.rules.noBallRuns === 1 ? "run" : "runs"} (defined in rules)
+          </p>
+
           <label className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700">
             Run out on this ball
             <input type="checkbox" checked={noBallWicket} onChange={(event) => setNoBallWicket(event.target.checked)} />

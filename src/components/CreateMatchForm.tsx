@@ -22,6 +22,9 @@ export function CreateMatchForm() {
   const [battingFirstTeamId, setBattingFirstTeamId] = useState<TeamKey>("A");
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<FormErrors>({});
+  const [wideRuns, setWideRuns] = useState(1);
+  const [noBallRuns, setNoBallRuns] = useState(1);
+
 
   const playerCount = useMemo(
     () => ({
@@ -43,7 +46,9 @@ export function CreateMatchForm() {
       oversLimit,
       tossWinnerId,
       battingFirstTeamId,
+      rules: { wideRuns, noBallRuns },
     });
+
 
     if (!validation.isValid) {
       setErrors(validation.errors);
@@ -61,7 +66,9 @@ export function CreateMatchForm() {
       oversLimit: validation.normalized.oversLimit,
       tossWinnerId,
       battingFirstTeamId,
+      rules: { wideRuns, noBallRuns },
     });
+
 
     saveMatchLocal(match);
     await pushMatch(match);
@@ -135,6 +142,48 @@ export function CreateMatchForm() {
         </div>
         <p className="mt-4 text-sm text-slate-600">Toss winner: <span className="font-semibold text-slate-900">{tossWinnerName}</span>. Batting first: <span className="font-semibold text-slate-900">{battingFirstTeamId === "A" ? teamAName.trim() || "Team A" : teamBName.trim() || "Team B"}</span>.</p>
       </div>
+
+      <div className="rounded-2xl border-2 border-slate-200 bg-slate-50 p-4">
+        <div className="mb-4 flex items-center gap-2">
+          <span className="text-lg text-slate-500">⚙</span>
+          <p className="font-display text-lg font-semibold uppercase tracking-tight text-slate-700">Match Rules</p>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2">
+          <label className="space-y-2">
+            <span className="font-display text-xs font-bold uppercase tracking-[0.2em] text-[var(--primary-container)]">Wide Runs</span>
+            <div className="flex gap-2">
+              {[0, 1].map(r => (
+                <button 
+                  key={r} 
+                  type="button"
+                  onClick={() => setWideRuns(r)}
+                  className={`flex-1 py-3 rounded-xl border-2 font-bold transition ${wideRuns === r ? "bg-emerald-900 text-white border-emerald-900" : "bg-white text-slate-600 border-slate-200"}`}
+                >
+                  {r} {r === 1 ? "Run" : "Runs"}
+                </button>
+              ))}
+            </div>
+            <p className="text-[10px] text-slate-500">Runs awarded to batting team per wide ball.</p>
+          </label>
+          <label className="space-y-2">
+            <span className="font-display text-xs font-bold uppercase tracking-[0.2em] text-[var(--primary-container)]">No-ball Runs</span>
+            <div className="flex gap-2">
+              {[0, 1].map(r => (
+                <button 
+                  key={r} 
+                  type="button"
+                  onClick={() => setNoBallRuns(r)}
+                  className={`flex-1 py-3 rounded-xl border-2 font-bold transition ${noBallRuns === r ? "bg-emerald-900 text-white border-emerald-900" : "bg-white text-slate-600 border-slate-200"}`}
+                >
+                  {r} {r === 1 ? "Run" : "Runs"}
+                </button>
+              ))}
+            </div>
+            <p className="text-[10px] text-slate-500">Runs awarded to batting team per no-ball.</p>
+          </label>
+        </div>
+      </div>
+
 
       <button type="submit" disabled={submitting} className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[var(--primary)] px-5 py-5 font-display text-xl font-bold text-white shadow-lg transition hover:brightness-110 disabled:opacity-70">
         {submitting ? "Creating match..." : "Start Match"}

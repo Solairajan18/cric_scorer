@@ -2,6 +2,11 @@ export type TeamKey = "A" | "B";
 export type MatchStatus = "live" | "innings_break" | "completed";
 export type WicketKind = "bowled" | "caught" | "run_out" | "lbw" | "stumped" | "hit_wicket" | "retired_hurt";
 export type EventKind = "run" | "wicket" | "wide" | "no_ball" | "bye" | "leg_bye";
+export type MatchRules = {
+  wideRuns: number;
+  noBallRuns: number;
+};
+
 
 export type Player = {
   id: string;
@@ -110,7 +115,9 @@ export type Match = {
   battingFirstTeamId: TeamKey;
   winnerTeamId?: TeamKey | "tie";
   summary?: MatchSummary;
+  rules: MatchRules;
 };
+
 
 export type MatchCreateInput = {
   teamAName: string;
@@ -120,4 +127,5 @@ export type MatchCreateInput = {
   oversLimit: number;
   tossWinnerId: TeamKey;
   battingFirstTeamId: TeamKey;
+  rules: MatchRules;
 };

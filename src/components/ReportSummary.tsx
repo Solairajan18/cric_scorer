@@ -130,7 +130,7 @@ export function ReportSummary({ match, showActions = true }: { match: Match; sho
               {/* Bowler Table */}
               <div className="w-full pt-4">
                 <div className="grid grid-cols-[1fr_40px_40px_40px_40px_40px_40px_60px_20px] bg-[#f2f2f2] px-4 py-2 text-[13px] font-bold text-[#333]">
-                  <div>Bowler</div>
+                  <div>Bowling</div>
                   <div className="text-right">O</div>
                   <div className="text-right">M</div>
                   <div className="text-right">R</div>

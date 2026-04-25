@@ -23,17 +23,17 @@ function StatCard({
   onClick: () => void;
 }) {
   return (
-    <button onClick={onClick} className={`flex items-center justify-between rounded-lg border-2 p-4 text-left transition ${accent ? "border-[var(--primary-fixed-dim)] bg-emerald-800/10" : "border-transparent bg-slate-100 hover:border-[var(--primary-fixed-dim)] hover:bg-slate-50"}`}>
-      <div className="flex min-w-0 items-center gap-3">
-        <div className={`flex h-9 w-9 items-center justify-center rounded-full font-display text-sm font-bold ${accent ? "bg-[var(--primary-fixed-dim)] text-[var(--primary)]" : "bg-emerald-800 text-white/90"}`}>
+    <button onClick={onClick} className={`flex flex-col justify-between rounded-lg border-2 p-3 text-left transition ${accent ? "border-emerald-400 bg-emerald-700/40" : "border-transparent bg-slate-100 hover:border-[var(--primary-fixed-dim)] hover:bg-slate-50"}`}>
+      <div className="flex min-w-0 items-center gap-2">
+        <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full font-display text-[10px] font-bold ${accent ? "bg-emerald-400 text-emerald-950" : "bg-emerald-800 text-white/90"}`}>
           {name.slice(0, 2).toUpperCase()}
         </div>
         <div className="min-w-0">
-          <p className="font-display text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">{label}</p>
-          <p className="mt-1 truncate font-display text-base font-semibold text-slate-950">{name}</p>
+          <p className={`font-display text-[9px] font-bold uppercase tracking-[0.15em] ${accent ? "text-emerald-100" : "text-slate-500"}`}>{label}</p>
+          <p className={`truncate font-display text-sm font-semibold leading-tight ${accent ? "text-white" : "text-slate-950"}`}>{name}</p>
         </div>
       </div>
-      <p className="shrink-0 text-right text-sm font-semibold text-slate-700">{meta}</p>
+      <p className={`mt-2 text-left text-sm font-bold ${accent ? "text-white" : "text-slate-700"}`}>{meta}</p>
     </button>
   );
 }
@@ -43,7 +43,7 @@ export function PlayerPanel({ match, onBatsmanClick, onBowlerClick }: Props) {
 
   return (
     <section className="shrink-0 rounded-xl border-2 border-emerald-900 bg-[var(--primary-container)] p-4 text-white">
-      <div className="space-y-2">
+      <div className="grid grid-cols-2 gap-2">
         <StatCard
           label="On strike"
           name={`${getPlayerName(match, innings.strikerId)}*`}

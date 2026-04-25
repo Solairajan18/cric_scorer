@@ -129,6 +129,7 @@ function resetMatchFromExisting(original: Match): Match {
     actions: [],
     tossWinnerId: original.tossWinnerId,
     battingFirstTeamId: original.battingFirstTeamId,
+    rules: original.rules,
   };
 }
 
@@ -299,7 +300,6 @@ function validateOutcome(outcome: BallOutcome) {
   }
 
   if (outcome.type === "no_ball") {
-    if (outcome.extraRuns < 1) throw new Error("No ball must include the automatic extra run.");
     if (outcome.wicket && outcome.wicketType !== "run_out") throw new Error("Only run out is allowed on a no ball.");
     if (outcome.wicket && !outcome.dismissedPlayerId) throw new Error("Choose the dismissed batter.");
   }
@@ -565,6 +565,7 @@ export function createMatch(input: MatchCreateInput): Match {
     actions: [],
     tossWinnerId: input.tossWinnerId,
     battingFirstTeamId: input.battingFirstTeamId,
+    rules: input.rules,
   };
 
   finalizeMatchState(match);
