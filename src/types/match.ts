@@ -1,6 +1,6 @@
 export type TeamKey = "A" | "B";
 export type MatchStatus = "live" | "innings_break" | "completed";
-export type WicketKind = "bowled" | "caught" | "run_out" | "lbw" | "stumped" | "retired";
+export type WicketKind = "bowled" | "caught" | "run_out" | "lbw" | "stumped" | "hit_wicket" | "retired_hurt";
 export type EventKind = "run" | "wicket" | "wide" | "no_ball" | "bye" | "leg_bye";
 
 export type Player = {
@@ -20,6 +20,7 @@ export type BatterStats = {
   fours: number;
   sixes: number;
   out: boolean;
+  retiredHurt: boolean;
 };
 
 export type BowlerStats = {
@@ -28,6 +29,13 @@ export type BowlerStats = {
   wickets: number;
   wides: number;
   noBalls: number;
+};
+
+export type Dismissal = {
+  playerId: string;
+  type: WicketKind;
+  creditedToBowler: boolean;
+  onIllegalDelivery: boolean;
 };
 
 export type Innings = {
@@ -40,29 +48,45 @@ export type Innings = {
   strikerId: string;
   nonStrikerId: string;
   currentBowlerId: string;
+  awaitingBowlerChange: boolean;
   batsmen: Record<string, BatterStats>;
   bowlers: Record<string, BowlerStats>;
   eventIds: string[];
   completed: boolean;
 };
 
+export type BallOutcome =
+  | { type: "run"; runs: 0 | 1 | 2 | 3 | 4 | 5 | 6 }
+  | { type: "wide"; totalExtras: number; wicket: boolean; wicketType?: "run_out" | "stumped"; dismissedPlayerId?: string }
+  | { type: "no_ball"; batRuns: 0 | 1 | 2 | 3 | 4 | 5 | 6; extraRuns: number; wicket: boolean; wicketType?: "run_out"; dismissedPlayerId?: string }
+  | { type: "bye"; runs: 1 | 2 | 3 | 4 | 5 }
+  | { type: "leg_bye"; runs: 1 | 2 | 3 | 4 | 5 }
+  | { type: "wicket"; wicketType: WicketKind; runsCompleted?: 0 | 1 | 2 | 3 | 4 | 5; dismissedPlayerId: string };
+
 export type BallEvent = {
   id: string;
   inningsNumber: 1 | 2;
-  over: number;
+  overNumber: number;
   ballInOver: number;
-  label: string;
+  displaySequence: string;
   kind: EventKind;
-  runs: number;
-  extraRuns: number;
   legal: boolean;
-  isWicket: boolean;
-  wicketKind?: WicketKind;
+  totalRuns: number;
+  batterRuns: number;
+  extraRuns: number;
   strikerId: string;
   bowlerId: string;
-  dismissedPlayerId?: string;
+  dismissal?: Dismissal;
+  outcome: BallOutcome;
   timestamp: number;
 };
+
+export type MatchAction =
+  | { type: "ball"; outcome: BallOutcome }
+  | { type: "set_bowler"; bowlerId: string }
+  | { type: "swap_player"; slot: "striker" | "nonStriker"; incomingPlayerId: string }
+  | { type: "retire_hurt"; playerId: string; replacementPlayerId: string }
+  | { type: "start_second_innings"; bowlerId: string };
 
 export type MatchSummary = {
   result: string;
@@ -81,6 +105,7 @@ export type Match = {
   currentInnings: 1 | 2;
   innings: [Innings, Innings];
   events: BallEvent[];
+  actions: MatchAction[];
   tossWinnerId: TeamKey;
   battingFirstTeamId: TeamKey;
   winnerTeamId?: TeamKey | "tie";

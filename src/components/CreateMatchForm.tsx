@@ -6,7 +6,8 @@ import { createMatch, parsePlayerNames, saveMatchLocal, sanitizeOvers, validateM
 import { pushMatch } from "@/lib/match-sync";
 import { TeamKey } from "@/types/match";
 
-const DEFAULT_PLAYERS = "Akash\nRohit\nSam\nKunal\nVijay\nNitin\nJay\nArun";
+const DEFAULT_PLAYERS_A = "Akash\nRohit\nSam\nKunal\nVijay\nNitin\nJay\nArun";
+const DEFAULT_PLAYERS_B = "Ravi\nKarthik\nSuresh\nPradeep\nAnbu\nMohan\nSenthil\nDinesh";
 
 type FormErrors = Partial<Record<"teamAName" | "teamBName" | "teamAPlayers" | "teamBPlayers" | "oversLimit", string>>;
 
@@ -14,8 +15,8 @@ export function CreateMatchForm() {
   const router = useRouter();
   const [teamAName, setTeamAName] = useState("Weekend Warriors");
   const [teamBName, setTeamBName] = useState("Sunday Strikers");
-  const [teamAPlayers, setTeamAPlayers] = useState(DEFAULT_PLAYERS);
-  const [teamBPlayers, setTeamBPlayers] = useState(DEFAULT_PLAYERS);
+  const [teamAPlayers, setTeamAPlayers] = useState(DEFAULT_PLAYERS_A);
+  const [teamBPlayers, setTeamBPlayers] = useState(DEFAULT_PLAYERS_B);
   const [oversLimit, setOversLimit] = useState(8);
   const [tossWinnerId, setTossWinnerId] = useState<TeamKey>("A");
   const [battingFirstTeamId, setBattingFirstTeamId] = useState<TeamKey>("A");
@@ -68,69 +69,76 @@ export function CreateMatchForm() {
   }
 
   return (
-    <form action={handleSubmit} className="space-y-6 rounded-[28px] bg-white p-5 shadow-soft md:p-7">
-      <div className="space-y-2">
-        <h2 className="text-xl font-semibold text-slate-950">Set up the match</h2>
-        <p className="text-sm leading-6 text-slate-600">Keep it quick: add team names, paste players, pick who bats first, then start scoring.</p>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-2">
-        <label className="space-y-2">
-          <span className="text-sm font-medium text-slate-700">Team A</span>
-          <input value={teamAName} onChange={(event) => setTeamAName(event.target.value)} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none transition focus:border-teal-500" />
+    <form action={handleSubmit} className="space-y-6">
+      <div className="grid gap-3 md:grid-cols-2">
+        <label className="app-card space-y-2 p-4">
+          <span className="font-display text-xs font-bold uppercase tracking-[0.2em] text-[var(--primary-container)]">Team A (Home)</span>
+          <input value={teamAName} onChange={(event) => setTeamAName(event.target.value)} className="w-full border-2 border-[var(--outline-variant)] bg-white px-4 py-3 text-base outline-none focus:border-[var(--primary-container)]" />
+          <div className="flex gap-2">
+            {battingFirstTeamId === "A" ? <span className="rounded-md bg-[var(--primary-fixed-dim)] px-2 py-1 text-[10px] font-bold uppercase text-[var(--primary-container)]">Batting First</span> : null}
+            {tossWinnerId === "A" ? <span className="rounded-md bg-amber-100 px-2 py-1 text-[10px] font-bold uppercase text-[var(--tertiary-container)]">Won Toss</span> : null}
+          </div>
           {errors.teamAName ? <p className="text-sm text-rose-600">{errors.teamAName}</p> : null}
         </label>
-        <label className="space-y-2">
-          <span className="text-sm font-medium text-slate-700">Team B</span>
-          <input value={teamBName} onChange={(event) => setTeamBName(event.target.value)} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none transition focus:border-teal-500" />
+        <label className="app-card space-y-2 p-4">
+          <span className="font-display text-xs font-bold uppercase tracking-[0.2em] text-[var(--primary-container)]">Team B (Away)</span>
+          <input value={teamBName} onChange={(event) => setTeamBName(event.target.value)} className="w-full border-2 border-[var(--outline-variant)] bg-white px-4 py-3 text-base outline-none focus:border-[var(--primary-container)]" />
+          <div className="flex gap-2">
+            {battingFirstTeamId === "B" ? <span className="rounded-md bg-[var(--primary-fixed-dim)] px-2 py-1 text-[10px] font-bold uppercase text-[var(--primary-container)]">Batting First</span> : null}
+            {tossWinnerId === "B" ? <span className="rounded-md bg-amber-100 px-2 py-1 text-[10px] font-bold uppercase text-[var(--tertiary-container)]">Won Toss</span> : null}
+          </div>
           {errors.teamBName ? <p className="text-sm text-rose-600">{errors.teamBName}</p> : null}
         </label>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <label className="space-y-2">
-          <span className="text-sm font-medium text-slate-700">Team A players ({playerCount.A})</span>
-          <span className="block text-xs leading-5 text-slate-500">Enter one player per line. Commas and pasted `&lt;br&gt;` values are cleaned up automatically.</span>
-          <textarea value={teamAPlayers} onChange={(event) => setTeamAPlayers(event.target.value)} rows={8} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none transition focus:border-teal-500" />
+        <label className="app-card space-y-2 p-4">
+          <span className="font-display text-xs font-bold uppercase tracking-[0.2em] text-[var(--primary-container)]">Team A Players ({playerCount.A})</span>
+          <span className="text-xs leading-5 text-slate-500">Enter one player per line. Commas and pasted `&lt;br&gt;` values are cleaned up automatically.</span>
+          <textarea value={teamAPlayers} onChange={(event) => setTeamAPlayers(event.target.value)} rows={8} className="w-full border-2 border-[var(--outline-variant)] bg-white px-4 py-3 outline-none focus:border-[var(--primary-container)]" />
           {errors.teamAPlayers ? <p className="text-sm text-rose-600">{errors.teamAPlayers}</p> : null}
         </label>
-        <label className="space-y-2">
-          <span className="text-sm font-medium text-slate-700">Team B players ({playerCount.B})</span>
-          <span className="block text-xs leading-5 text-slate-500">Enter one player per line. Blank rows are ignored.</span>
-          <textarea value={teamBPlayers} onChange={(event) => setTeamBPlayers(event.target.value)} rows={8} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none transition focus:border-teal-500" />
+        <label className="app-card space-y-2 p-4">
+          <span className="font-display text-xs font-bold uppercase tracking-[0.2em] text-[var(--primary-container)]">Team B Players ({playerCount.B})</span>
+          <span className="text-xs leading-5 text-slate-500">Enter one player per line. Blank rows are ignored.</span>
+          <textarea value={teamBPlayers} onChange={(event) => setTeamBPlayers(event.target.value)} rows={8} className="w-full border-2 border-[var(--outline-variant)] bg-white px-4 py-3 outline-none focus:border-[var(--primary-container)]" />
           {errors.teamBPlayers ? <p className="text-sm text-rose-600">{errors.teamBPlayers}</p> : null}
         </label>
       </div>
 
-      <div className="rounded-3xl bg-slate-50 p-4">
-        <p className="text-sm font-medium text-slate-700">Toss and innings</p>
-        <p className="mt-1 text-sm leading-6 text-slate-500">Toss winner and batting first are separate on purpose. Use both fields to match the real decision.</p>
+      <div className="rounded-2xl border-2 border-[var(--tertiary-container)] bg-orange-50 p-4">
+        <div className="mb-4 flex items-center gap-2">
+          <span className="text-lg text-[var(--tertiary-container)]">O</span>
+          <p className="font-display text-lg font-semibold uppercase tracking-tight text-[var(--tertiary-container)]">The Toss</p>
+        </div>
+        <p className="text-sm leading-6 text-slate-600">Use both fields to match the real toss result and decision.</p>
         <div className="mt-4 grid gap-4 md:grid-cols-3">
         <label className="space-y-2">
-          <span className="text-sm font-medium text-slate-700">Overs</span>
-          <input type="number" min={1} max={50} step={1} value={oversLimit} onChange={(event) => setOversLimit(sanitizeOvers(Number(event.target.value)))} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none transition focus:border-teal-500" />
+          <span className="font-display text-xs font-bold uppercase tracking-[0.2em] text-[var(--primary-container)]">Overs</span>
+          <input type="number" min={1} max={50} step={1} value={oversLimit} onChange={(event) => setOversLimit(sanitizeOvers(Number(event.target.value)))} className="w-full border-2 border-[var(--outline-variant)] bg-white px-4 py-3 outline-none focus:border-[var(--primary-container)]" />
           {errors.oversLimit ? <p className="text-sm text-rose-600">{errors.oversLimit}</p> : null}
         </label>
         <label className="space-y-2">
-          <span className="text-sm font-medium text-slate-700">Toss winner</span>
-          <select value={tossWinnerId} onChange={(event) => setTossWinnerId(event.target.value as TeamKey)} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none transition focus:border-teal-500">
+          <span className="font-display text-xs font-bold uppercase tracking-[0.2em] text-[var(--primary-container)]">Toss Winner</span>
+          <select value={tossWinnerId} onChange={(event) => setTossWinnerId(event.target.value as TeamKey)} className="w-full border-2 border-[var(--outline-variant)] bg-white px-4 py-3 outline-none focus:border-[var(--primary-container)]">
             <option value="A">{teamAName.trim() || "Team A"}</option>
             <option value="B">{teamBName.trim() || "Team B"}</option>
           </select>
         </label>
         <label className="space-y-2">
-          <span className="text-sm font-medium text-slate-700">Batting first</span>
-          <select value={battingFirstTeamId} onChange={(event) => setBattingFirstTeamId(event.target.value as TeamKey)} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none transition focus:border-teal-500">
+          <span className="font-display text-xs font-bold uppercase tracking-[0.2em] text-[var(--primary-container)]">Batting First</span>
+          <select value={battingFirstTeamId} onChange={(event) => setBattingFirstTeamId(event.target.value as TeamKey)} className="w-full border-2 border-[var(--outline-variant)] bg-white px-4 py-3 outline-none focus:border-[var(--primary-container)]">
             <option value="A">{teamAName.trim() || "Team A"}</option>
             <option value="B">{teamBName.trim() || "Team B"}</option>
           </select>
         </label>
         </div>
-        <p className="mt-4 text-sm text-slate-600">Toss winner: <span className="font-medium text-slate-900">{tossWinnerName}</span>. Batting first: <span className="font-medium text-slate-900">{battingFirstTeamId === "A" ? teamAName.trim() || "Team A" : teamBName.trim() || "Team B"}</span>.</p>
+        <p className="mt-4 text-sm text-slate-600">Toss winner: <span className="font-semibold text-slate-900">{tossWinnerName}</span>. Batting first: <span className="font-semibold text-slate-900">{battingFirstTeamId === "A" ? teamAName.trim() || "Team A" : teamBName.trim() || "Team B"}</span>.</p>
       </div>
 
-      <button type="submit" disabled={submitting} className="w-full rounded-2xl bg-slate-900 px-5 py-4 text-base font-semibold text-white transition hover:bg-slate-800 disabled:opacity-70">
-        {submitting ? "Creating match..." : "Create match"}
+      <button type="submit" disabled={submitting} className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[var(--primary)] px-5 py-5 font-display text-xl font-bold text-white shadow-lg transition hover:brightness-110 disabled:opacity-70">
+        {submitting ? "Creating match..." : "Start Match"}
+        <span className="text-lg">&gt;</span>
       </button>
     </form>
   );

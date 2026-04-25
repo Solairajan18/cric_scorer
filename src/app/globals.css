@@ -4,13 +4,34 @@
 
 :root {
   color-scheme: light;
+  --background: #fcf9f8;
+  --surface: #ffffff;
+  --surface-muted: #f0edec;
+  --surface-soft: #ebe7e7;
+  --outline: #717974;
+  --outline-variant: #c0c8c3;
+  --primary: #00261b;
+  --primary-container: #0b3d2e;
+  --primary-fixed: #bcedd7;
+  --primary-fixed-dim: #a0d1bc;
+  --on-primary-container: #79a894;
+  --tertiary-container: #552a00;
+  --on-tertiary-container: #ef8100;
+  --error-container: #ffdad6;
 }
 
 body {
-  @apply bg-slate-100 text-slate-900;
-  background-image:
-    radial-gradient(circle at top left, rgba(20, 184, 166, 0.16), transparent 28%),
-    radial-gradient(circle at top right, rgba(245, 158, 11, 0.14), transparent 22%);
+  background: var(--background);
+  color: #1c1b1b;
+  font-family: var(--font-inter), sans-serif;
+}
+
+h1,
+h2,
+h3,
+h4,
+.font-display {
+  font-family: var(--font-lexend), sans-serif;
 }
 
 button,
@@ -22,4 +43,32 @@ select {
 
 * {
   -webkit-tap-highlight-color: transparent;
+  box-sizing: border-box;
+}
+
+.app-topbar {
+  background: #0b3d2e;
+  color: white;
+  border-bottom: 2px solid #14532d;
+}
+
+.app-card {
+  background: var(--surface);
+  border: 2px solid rgba(192, 200, 195, 0.65);
+  border-radius: 1rem;
+}
+
+.app-muted-card {
+  background: var(--surface-muted);
+  border-radius: 1rem;
+}
+
+.app-bottom-nav {
+  background: #0b3d2e;
+  border-top: 2px solid #14532d;
+}
+
+.app-bottom-nav-active {
+  background: #166534;
+  border-bottom: 2px solid #f97316;
 }

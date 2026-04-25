@@ -18,8 +18,8 @@ export function ShareBar({ title, text }: Props) {
   }
 
   return (
-    <button onClick={handleShare} className="rounded-2xl bg-teal-600 px-4 py-3 font-semibold text-white transition hover:bg-teal-700">
-      Share live link
+    <button onClick={handleShare} className="rounded-lg bg-emerald-800 px-3 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700">
+      Share
     </button>
   );
 }

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { AppTopBar, BottomNav } from "@/components/AppChrome";
 import { ReportSummary } from "@/components/ReportSummary";
 import { useMatch } from "@/hooks/useMatch";
 
@@ -25,11 +26,15 @@ export default function MatchReportPage() {
   }
 
   return (
-    <main className="mx-auto max-w-5xl px-4 py-6 md:px-6 md:py-8">
-      <div className="mb-5 flex items-center justify-between gap-3">
-        <Link href={`/m/${match.id}`} className="text-sm font-medium text-slate-600 hover:text-slate-900">Back to live match</Link>
-      </div>
-      <ReportSummary match={match} />
-    </main>
+    <>
+      <AppTopBar />
+      <main className="mx-auto max-w-5xl px-4 pb-28 pt-20 md:px-6 md:pt-24">
+        <div className="mb-5 flex items-center justify-between gap-3">
+          <Link href={`/m/${match.id}`} className="text-sm font-medium text-slate-600 hover:text-slate-900">Back to live match</Link>
+        </div>
+        <ReportSummary match={match} />
+      </main>
+      <BottomNav active="summary" />
+    </>
   );
 }

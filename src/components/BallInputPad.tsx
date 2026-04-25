@@ -1,51 +1,75 @@
 "use client";
 
-import { EventKind, WicketKind } from "@/types/match";
-
 type Props = {
-  onBall: (input: { kind: EventKind; runs: number; wicketKind?: WicketKind }) => void;
+  onRun: (runs: 0 | 1 | 2 | 3 | 4 | 5 | 6) => void;
+  onWide: () => void;
+  onNoBall: () => void;
+  onBye: (kind: "bye" | "leg_bye") => void;
+  onWicket: () => void;
   onUndo: () => void;
+  lastActionLabel: string;
 };
 
-const runButtons = [0, 1, 2, 3, 4, 6];
-const extras = [
-  { label: "Wd", kind: "wide" as const, runs: 1 },
-  { label: "Nb", kind: "no_ball" as const, runs: 1 },
-  { label: "B1", kind: "bye" as const, runs: 1 },
-  { label: "Lb1", kind: "leg_bye" as const, runs: 1 },
-];
+const runRows = [
+  [0, 1, 2, 3],
+  [4, 5, 6, "W"],
+] as const;
 
-export function BallInputPad({ onBall, onUndo }: Props) {
+type RunRowItem = 0 | 1 | 2 | 3 | 4 | 5 | 6 | "W";
+
+export function BallInputPad({ onRun, onWide, onNoBall, onBye, onWicket, onUndo, lastActionLabel }: Props) {
   return (
-    <section className="space-y-4 rounded-[28px] bg-white p-5 shadow-soft">
-      <div>
-        <p className="text-sm font-medium text-slate-700">Ball by ball</p>
-        <p className="text-sm text-slate-500">Large controls for quick scoring on phone.</p>
-      </div>
-
-      <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
-        {runButtons.map((runs) => (
-          <button key={runs} onClick={() => onBall({ kind: "run", runs })} className="min-h-14 rounded-2xl bg-teal-50 text-lg font-semibold text-teal-900 transition hover:bg-teal-100">
-            {runs}
-          </button>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {extras.map((item) => (
-          <button key={item.label} onClick={() => onBall({ kind: item.kind, runs: item.runs })} className="min-h-12 rounded-2xl bg-amber-50 font-semibold text-amber-900 transition hover:bg-amber-100">
-            {item.label}
-          </button>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        <button onClick={() => onBall({ kind: "wicket", runs: 0, wicketKind: "bowled" })} className="min-h-14 rounded-2xl bg-rose-100 font-semibold text-rose-900 transition hover:bg-rose-200">
-          Wicket
+    <section className="flex min-h-0 flex-1 flex-col gap-4 rounded-xl bg-white p-4">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="font-display text-sm font-bold uppercase tracking-[0.2em] text-slate-600">Scoring Zone</p>
+          <p className="text-xs text-slate-500">{lastActionLabel}</p>
+        </div>
+        <button onClick={onUndo} className="rounded-lg border-2 border-[var(--outline-variant)] bg-[var(--surface-soft)] px-4 py-2.5 text-sm font-semibold text-slate-900 transition hover:bg-slate-200">
+          Undo
         </button>
-        <button onClick={onUndo} className="min-h-14 rounded-2xl bg-slate-100 font-semibold text-slate-900 transition hover:bg-slate-200">
-          Undo last ball
-        </button>
+      </div>
+
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <p className="font-display text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500">Runs</p>
+          <p className="text-[11px] text-slate-400">One tap scoring</p>
+        </div>
+        <div className="grid grid-rows-2 gap-3">
+          {runRows.map((row, rowIndex) => (
+            <div key={rowIndex} className="grid grid-cols-4 gap-3">
+              {row.map((item) => {
+                const isWicket = item === "W";
+
+                return (
+                  <button
+                    key={item}
+                    onClick={() => (isWicket ? onWicket() : onRun(item))}
+                    className={isWicket
+                      ? "min-h-16 rounded-lg border-b-4 border-[var(--tertiary-container)] bg-[var(--on-tertiary-container)] text-lg font-bold text-white transition active:translate-y-1 active:border-b-0"
+                      : "min-h-16 rounded-lg border-b-4 border-[var(--outline-variant)] bg-[var(--surface-soft)] text-slate-900 transition active:translate-y-1 active:border-b-0"}
+                  >
+                    <span className="font-display text-[32px] font-extrabold">{item}</span>
+                  </button>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <p className="font-display text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500">Extras</p>
+          <p className="text-[11px] text-slate-400">Always available</p>
+        </div>
+        <div className="grid grid-cols-5 gap-2">
+          <button onClick={onWide} className="min-h-12 rounded-lg border-2 border-[var(--outline)] bg-white text-sm font-bold uppercase text-slate-800">Wd</button>
+          <button onClick={onNoBall} className="min-h-12 rounded-lg border-2 border-[var(--outline)] bg-white text-sm font-bold uppercase text-slate-800">Nb</button>
+          <button onClick={() => onBye("leg_bye")} className="min-h-12 rounded-lg border-2 border-[var(--outline)] bg-white text-sm font-bold uppercase text-slate-800">LB</button>
+          <button onClick={() => onBye("bye")} className="min-h-12 rounded-lg border-2 border-[var(--outline)] bg-white text-sm font-bold uppercase text-slate-800">B</button>
+          <button onClick={onWicket} className="min-h-12 rounded-lg border-b-4 border-[var(--tertiary-container)] bg-[var(--on-tertiary-container)] px-3 text-sm font-bold uppercase text-white active:translate-y-1 active:border-b-0">Wicket</button>
+        </div>
       </div>
     </section>
   );
