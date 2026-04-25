@@ -21,10 +21,18 @@ export function Scoreboard({ match }: { match: Match }) {
           </div>
         </div>
         <div className="text-right">
-          <span className="mb-2 inline-block rounded-sm bg-[var(--on-tertiary-container)] px-2 py-1 font-display text-[10px] font-bold uppercase text-white">Live Match</span>
+          <span className={`mb-2 inline-block rounded-sm px-2 py-1 font-display text-[10px] font-bold uppercase text-white ${isCompleted ? "bg-slate-700" : "bg-[var(--on-tertiary-container)]"}`}>
+            {isCompleted ? "Match Ended" : "Live Match"}
+          </span>
           <p className="text-sm text-emerald-100">CRR: {innings.legalBalls ? ((innings.runs * 6) / innings.legalBalls).toFixed(2) : "0.00"}</p>
         </div>
       </div>
+
+      {isCompleted && match.summary?.result && (
+        <div className="mt-4 rounded-xl bg-white/10 px-4 py-3 text-center ring-1 ring-white/20 shadow-inner">
+          <p className="font-display text-base font-bold text-emerald-50">{match.summary.result}</p>
+        </div>
+      )}
 
       <div className="mt-5 grid grid-cols-3 gap-3">
         <div className="rounded-lg bg-emerald-900/40 p-3">
@@ -39,7 +47,7 @@ export function Scoreboard({ match }: { match: Match }) {
           <p className="font-display text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-200">Status</p>
           <p className="mt-1 text-sm font-semibold text-white">
             {isCompleted
-              ? <Link href={`/m/${match.id}/report`} className="underline underline-offset-2">Scorecard</Link>
+              ? "Completed"
               : target
               ? `${required} needed`
               : `Extras: ${innings.extras}`}

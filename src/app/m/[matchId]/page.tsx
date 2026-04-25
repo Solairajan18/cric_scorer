@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { AppTopBar, BottomNav } from "@/components/AppChrome";
@@ -19,7 +19,7 @@ import {
   getCurrentBowlingTeam,
   getCurrentInnings,
   getEligibleIncomingBatters,
-  getLastActionLabel,
+  getOverProgressLabel,
   getPlayerName,
   retireHurtPlayer,
   setCurrentBowler,
@@ -43,6 +43,7 @@ function canScore(match: Match | null) {
 export default function MatchPage() {
   const params = useParams<{ matchId: string }>();
   const { match, loading, save } = useMatch(params.matchId);
+  const reportRef = useRef<{ exportImage: () => void }>(null);
   const [openSheet, setOpenSheet] = useState<Sheet>(null);
   const [wideExtras, setWideExtras] = useState(0);
   const [wideWicket, setWideWicket] = useState(false);
@@ -220,7 +221,11 @@ export default function MatchPage() {
         <div className="space-y-4">
           <div className="flex shrink-0 items-center justify-between gap-3">
             <Link href="/" className="text-sm font-medium text-slate-600 hover:text-slate-900">Back</Link>
-            <ShareBar title={`${currentMatch.teamA.name} vs ${currentMatch.teamB.name}`} text="Join the live weekend cricket scorecard." />
+            <ShareBar 
+              title={`${currentMatch.teamA.name} vs ${currentMatch.teamB.name}`} 
+              text="Join the live weekend cricket scorecard." 
+              onClick={() => reportRef.current?.exportImage()}
+            />
           </div>
 
           <Scoreboard match={currentMatch} />
@@ -237,17 +242,21 @@ export default function MatchPage() {
                   onBye={openByeSheet}
                   onWicket={() => guardedAction(() => setOpenSheet("wicket"))}
                   onUndo={() => void saveNext(undoLastAction(currentMatch))}
-                  lastActionLabel={getLastActionLabel(currentMatch)}
+                  match={currentMatch}
                 />
               ) : null}
-
-              <OverTimeline match={currentMatch} />
+              
+              {/* Hidden reporter for sharing from live tab */}
+              <div className="sr-only fixed -left-[9999px] top-0 w-[400px]">
+                <ReportSummary ref={reportRef} match={currentMatch} />
+              </div>
             </div>
           ) : (
             <div className="bg-white rounded-xl overflow-hidden shadow-sm border border-slate-200">
-              <ReportSummary match={currentMatch} showActions={false} />
+              <ReportSummary ref={reportRef} match={currentMatch} />
             </div>
           )}
+
         </div>
       </main>
       <BottomNav 
@@ -255,10 +264,6 @@ export default function MatchPage() {
         onTabChange={(key) => {
           if (key === "live") setActiveTab("scoring");
           if (key === "scorecard") setActiveTab("scorecard");
-          if (key === "summary") {
-            // Summary usually goes to the report page
-            window.location.href = `/m/${currentMatch.id}/report`;
-          }
         }} 
       />
 

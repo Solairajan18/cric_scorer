@@ -13,7 +13,35 @@ function ballCircleClass(event: BallEvent) {
   return "bg-white border-[var(--outline-variant)] text-slate-800";
 }
 
+export function BallCircles({ match }: { match: Match }) {
+  const innings = getCurrentInnings(match);
+  const currentOverNumber = Math.floor(innings.legalBalls / 6) + 1;
+  const recent = match.events.filter(
+    (e) => e.inningsNumber === match.currentInnings && e.overNumber === currentOverNumber,
+  );
+
+  const legalBallsInOver = recent.filter((e) => e.legal).length;
+  const emptySlots = Math.max(0, 6 - legalBallsInOver);
+
+  return (
+    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+      {recent.map((event) => (
+        <div
+          key={event.id}
+          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 text-[10px] font-bold ${ballCircleClass(event)}`}
+        >
+          {event.displaySequence}
+        </div>
+      ))}
+      {Array.from({ length: emptySlots }).map((_, index) => (
+        <div key={`empty-${index}`} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-dashed border-slate-200" />
+      ))}
+    </div>
+  );
+}
+
 export function OverTimeline({ match }: { match: Match }) {
+
   const innings = getCurrentInnings(match);
   // Over number based on legal balls only — wides/no-balls don't advance this
   const currentOverNumber = Math.floor(innings.legalBalls / 6) + 1;

@@ -34,7 +34,7 @@ export default function MatchReportPage() {
         </div>
         <ReportSummary match={match} />
       </main>
-      <BottomNav active="summary" />
+      <BottomNav active="scorecard" />
     </>
   );
 }

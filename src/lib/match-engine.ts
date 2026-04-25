@@ -695,16 +695,17 @@ export function getEligibleIncomingBatters(match: Match) {
   });
 }
 
-export function getLastActionLabel(match: Match) {
-  const lastEvent = match.events.at(-1);
-  if (lastEvent) return `Last: ${lastEvent.displaySequence}`;
-  const lastAction = match.actions.at(-1);
-  if (!lastAction) return "No actions yet";
-  if (lastAction.type === "set_bowler") return "Last: bowler changed";
-  if (lastAction.type === "retire_hurt") return "Last: retired hurt";
-  if (lastAction.type === "swap_player") return "Last: player swapped";
-  if (lastAction.type === "start_second_innings") return "Last: chase started";
-  return "No actions yet";
+export function getOverProgressLabel(match: Match) {
+  const innings = getCurrentInnings(match);
+  const totalBalls = innings.legalBalls;
+  const currentOver = Math.floor(totalBalls / 6) + 1;
+  const ballsInThisOver = totalBalls % 6;
+  
+  if (innings.awaitingBowlerChange) {
+    return `Over ${currentOver - 1} Complete`;
+  }
+  
+  return `Over ${currentOver} — ${ballsInThisOver}/6`;
 }
 export function getExtrasBreakdown(events: BallEvent[]) {
   return events.reduce(

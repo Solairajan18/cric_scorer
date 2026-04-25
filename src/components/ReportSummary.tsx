@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { forwardRef, useImperativeHandle, useRef } from "react";
 import { toBlob } from "html-to-image";
 import Link from "next/link";
 import { Match } from "@/types/match";
@@ -24,7 +24,7 @@ function downloadBlob(blob: Blob, filename: string) {
   URL.revokeObjectURL(url);
 }
 
-export function ReportSummary({ match, showActions = true }: { match: Match; showActions?: boolean }) {
+export const ReportSummary = forwardRef(function ReportSummary({ match }: { match: Match }, ref) {
   const exportRef = useRef<HTMLDivElement>(null);
 
   async function handleExport() {
@@ -40,6 +40,11 @@ export function ReportSummary({ match, showActions = true }: { match: Match; sho
 
     downloadBlob(blob, `${match.id}-scorecard.png`);
   }
+
+  useImperativeHandle(ref, () => ({
+    exportImage: handleExport
+  }));
+
 
   return (
     <div className="space-y-6">
@@ -60,7 +65,7 @@ export function ReportSummary({ match, showActions = true }: { match: Match; sho
           return (
             <section key={idx} className="space-y-0">
               {/* Team Header */}
-              <div className="bg-[#008264] text-white px-4 py-2.5 flex justify-between items-center">
+              <div className="bg-[#0b3d2e] text-white px-4 py-2.5 flex justify-between items-center">
                 <h2 className="font-bold text-base">{teamName}</h2>
                 <p className="font-bold text-base">{innings.runs}-{innings.wickets} <span className="font-normal text-sm opacity-90">({toOvers(innings.legalBalls)} Ov)</span></p>
               </div>
@@ -87,7 +92,7 @@ export function ReportSummary({ match, showActions = true }: { match: Match; sho
                     return (
                       <div key={player.id} className="grid grid-cols-[1fr_40px_40px_40px_40px_60px_20px] px-4 py-2.5 text-[14px] items-center">
                         <div className="flex flex-col sm:flex-row sm:items-center gap-1 min-w-0">
-                          <span className="text-[#0059B2] font-medium truncate">{player.name}</span>
+                          <span className="text-[#064e3b] font-medium truncate">{player.name}</span>
                           <span className="text-[#666] text-[12px] truncate">{dismissal}</span>
                         </div>
                         <div className="text-right font-bold text-[#333]">{stats.runs}</div>
@@ -120,7 +125,7 @@ export function ReportSummary({ match, showActions = true }: { match: Match; sho
                 {yetToBat.length > 0 && (
                   <div className="px-4 py-2.5 border-t border-slate-100 text-[14px] flex gap-2">
                     <div className="font-bold text-[#333] whitespace-nowrap">Yet to Bat</div>
-                    <div className="text-[#0059B2] text-[13px]">
+                    <div className="text-[#064e3b] text-[13px]">
                       {yetToBat.map(p => p.name).join(", ")}
                     </div>
                   </div>
@@ -173,7 +178,7 @@ export function ReportSummary({ match, showActions = true }: { match: Match; sho
                   <div className="divide-y divide-slate-100">
                     {fows.map((fow, fIdx) => (
                       <div key={fIdx} className="grid grid-cols-[1fr_100px_100px] px-4 py-2.5 text-[14px] items-center">
-                        <div className="text-[#0059B2] font-medium">{fow.playerName}</div>
+                        <div className="text-[#064e3b] font-medium">{fow.playerName}</div>
                         <div className="text-center text-[#333]">{fow.score}-{fIdx + 1}</div>
                         <div className="text-right text-[#333] pr-4">{fow.overs}</div>
                       </div>
@@ -211,17 +216,6 @@ export function ReportSummary({ match, showActions = true }: { match: Match; sho
           );
         })}
       </div>
-
-      {showActions && (
-        <div className="grid grid-cols-2 gap-3 px-0">
-          <button onClick={handleExport} className="flex items-center justify-center gap-2 rounded-lg bg-slate-100 px-4 py-3 font-display text-sm font-bold uppercase text-slate-900 border border-slate-200">
-            Share Image
-          </button>
-          <Link href="/" className="flex items-center justify-center gap-2 rounded-lg bg-[#008264] px-4 py-3 font-display text-sm font-bold uppercase text-white">
-            New Match
-          </Link>
-        </div>
-      )}
     </div>
   );
-}
+});

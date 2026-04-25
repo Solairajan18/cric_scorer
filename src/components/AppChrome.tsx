@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 
-type NavKey = "setup" | "live" | "scorecard" | "summary";
+type NavKey = "setup" | "live" | "scorecard";
 
 export function AppTopBar() {
   return (
@@ -49,10 +49,6 @@ export function BottomNav({ active, onTabChange }: { active: NavKey; onTabChange
         <span className="mb-1 text-lg">S</span>
         <span>Scorecard</span>
       </button>
-      <Link href="#" onClick={(e) => handleTab("summary", e)} className={navItemClasses(active === "summary")}>
-        <span className="mb-1 text-lg">R</span>
-        <span>Summary</span>
-      </Link>
     </nav>
   );
 }
