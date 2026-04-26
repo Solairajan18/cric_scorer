@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { AppTopBar, BottomNav } from "@/components/AppChrome";
 import { BallInputPad } from "@/components/BallInputPad";
 import { BatsmanActionSheet } from "@/components/BatsmanActionSheet";
@@ -19,7 +19,6 @@ import {
   getCurrentBowlingTeam,
   getCurrentInnings,
   getEligibleIncomingBatters,
-  getOverProgressLabel,
   getPlayerName,
   retireHurtPlayer,
   setCurrentBowler,
@@ -29,7 +28,7 @@ import {
 } from "@/lib/match-engine";
 import { BallOutcome, Match, WicketKind } from "@/types/match";
 
-type Sheet = null | "wide" | "noBall" | "bye" | "wicket" | "bowler" | "batsman";
+type Sheet = null | "wide" | "noBall" | "bye" | "wicket" | "bowler" | "batsman" | "end_match";
 
 const runOptions = [1, 2, 3, 4, 5] as const;
 const wicketTypes: WicketKind[] = ["bowled", "caught", "run_out", "lbw", "stumped", "hit_wicket", "retired_hurt"];
@@ -42,21 +41,28 @@ function canScore(match: Match | null) {
 
 export default function MatchPage() {
   const params = useParams<{ matchId: string }>();
+  const router = useRouter();
   const { match, loading, save } = useMatch(params.matchId);
   const reportRef = useRef<{ exportImage: () => void }>(null);
+  
   const [openSheet, setOpenSheet] = useState<Sheet>(null);
+  const [abandonReason, setAbandonReason] = useState<string>("Rain");
+  const [customReason, setCustomReason] = useState<string>("");
+  
   const [wideExtras, setWideExtras] = useState(0);
   const [wideWicket, setWideWicket] = useState(false);
   const [wideWicketType, setWideWicketType] = useState<"run_out" | "stumped">("run_out");
   const [wideDismissed, setWideDismissed] = useState("");
+  
   const [noBallBatRuns, setNoBallBatRuns] = useState<0 | 1 | 2 | 3 | 4 | 5 | 6>(0);
-  const [noBallExtraRuns, setNoBallExtraRuns] = useState(1);
   const [noBallWicket, setNoBallWicket] = useState(false);
   const [noBallDismissed, setNoBallDismissed] = useState("");
+  
   const [byeKind, setByeKind] = useState<"bye" | "leg_bye">("bye");
   const [wicketType, setWicketType] = useState<WicketKind>("bowled");
   const [wicketRunsCompleted, setWicketRunsCompleted] = useState<0 | 1 | 2 | 3 | 4 | 5>(0);
   const [wicketDismissed, setWicketDismissed] = useState("");
+  
   const [playMode, setPlayMode] = useState<"swap" | "retire">("swap");
   const [playSlot, setPlaySlot] = useState<"striker" | "nonStriker">("striker");
   const [playIncoming, setPlayIncoming] = useState("");
@@ -65,13 +71,11 @@ export default function MatchPage() {
   const innings = match ? getCurrentInnings(match) : null;
   const incomingBatters = useMemo(() => (match ? getEligibleIncomingBatters(match) : []), [match]);
 
-  // Track if we've already auto-opened the bowler sheet for the current state
   const [autoOpenedKey, setAutoOpenedKey] = useState<string>("");
 
   useEffect(() => {
     if (!match || !innings) return;
 
-    // Create a unique key for the state that requires a bowler
     const isAwaiting = innings.awaitingBowlerChange || match.status === "innings_break";
     const stateKey = isAwaiting ? `${match.status}-${innings.legalBalls}-${match.currentInnings}` : "";
     
@@ -86,26 +90,30 @@ export default function MatchPage() {
     setPlayIncoming(getEligibleIncomingBatters(match)[0]?.id ?? "");
   }, [match, innings?.strikerId, innings?.nonStrikerId, innings?.legalBalls, innings?.awaitingBowlerChange]);
 
-  if (loading) {
-    return <main className="mx-auto max-w-4xl p-6 text-slate-600">Loading match...</main>;
-  }
+  if (loading) return <div className="flex h-screen items-center justify-center p-4"><p className="font-display font-bold animate-pulse text-slate-400 uppercase tracking-widest text-xs">Syncing Match...</p></div>;
+  if (!match) return <div className="flex h-screen items-center justify-center p-4 text-slate-500 font-bold">Match not found</div>;
 
-  if (!match || !innings) {
+  const currentMatch = match;
+  const currentInnings = getCurrentInnings(currentMatch);
+
+  if (currentMatch.status === "completed") {
     return (
-      <main className="mx-auto max-w-3xl p-6">
-        <div className="rounded-[28px] bg-white p-6 shadow-soft">
-          <h1 className="text-2xl font-semibold text-slate-900">Match not found</h1>
-          <p className="mt-2 text-slate-600">Open this match on the scorer device first, or configure Firebase for multi-device sync.</p>
-          <Link href="/" className="mt-5 inline-flex rounded-2xl bg-slate-900 px-4 py-3 font-medium text-white">
-            Create a match
-          </Link>
+      <main className="mx-auto max-w-2xl px-4 pb-20 pt-10 md:px-6">
+        <Scoreboard match={currentMatch} />
+        <div className="mt-8 space-y-4">
+          <div className="bg-white rounded-2xl p-6 border border-slate-200 text-center space-y-4 shadow-sm">
+             <h2 className="text-xl font-bold text-slate-900 tracking-tight">Match Concluded</h2>
+             <p className="text-slate-500 font-medium">{currentMatch.summary?.result}</p>
+             <Link href="/" className="inline-block rounded-xl bg-slate-900 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-slate-200 hover:scale-105 transition-transform">
+               Back to Home
+             </Link>
+          </div>
+          <ReportSummary ref={reportRef} match={currentMatch} />
         </div>
       </main>
     );
   }
 
-  const currentMatch = match;
-  const currentInnings = innings;
   const bowlingTeam = getCurrentBowlingTeam(currentMatch);
   const activeDismissalOptions = [currentInnings.strikerId, currentInnings.nonStrikerId].filter(Boolean);
 
@@ -118,7 +126,6 @@ export default function MatchPage() {
       setOpenSheet("bowler");
       return;
     }
-
     callback();
   }
 
@@ -143,7 +150,6 @@ export default function MatchPage() {
       wicketType: wideWicket ? wideWicketType : undefined,
       dismissedPlayerId: wideWicket ? wideDismissed : undefined,
     };
-
     void saveNext(applyBall(currentMatch, outcome));
     setOpenSheet(null);
     setWideExtras(0);
@@ -159,7 +165,6 @@ export default function MatchPage() {
       wicketType: noBallWicket ? "run_out" : undefined,
       dismissedPlayerId: noBallWicket ? noBallDismissed : undefined,
     };
-
     void saveNext(applyBall(currentMatch, outcome));
     setOpenSheet(null);
   }
@@ -176,17 +181,14 @@ export default function MatchPage() {
       runsCompleted: wicketType === "run_out" ? wicketRunsCompleted : 0,
       dismissedPlayerId: wicketDismissed,
     };
-
     const nextMatch = applyBall(currentMatch, outcome);
     void saveNext(nextMatch);
     if (nextMatch.status === "completed" || nextMatch.status === "innings_break" || !getEligibleIncomingBatters(nextMatch).length) {
       setOpenSheet(null);
       return;
     }
-
     const nextInnings = getCurrentInnings(nextMatch);
-    const lastDismissed = outcome.dismissedPlayerId;
-    setPlaySlot(lastDismissed === nextInnings.nonStrikerId ? "nonStriker" : "striker");
+    setPlaySlot(outcome.dismissedPlayerId === nextInnings.nonStrikerId ? "nonStriker" : "striker");
     setPlayIncoming(getEligibleIncomingBatters(nextMatch)[0]?.id ?? "");
     setOpenSheet("batsman");
   }
@@ -202,7 +204,6 @@ export default function MatchPage() {
     const nextMatch = playMode === "retire"
       ? retireHurtPlayer(currentMatch, playSlot === "striker" ? currentInnings.strikerId : currentInnings.nonStrikerId, playIncoming)
       : swapCurrentPlayer(currentMatch, playSlot, playIncoming);
-
     void saveNext(nextMatch);
     setOpenSheet(null);
   }
@@ -212,6 +213,21 @@ export default function MatchPage() {
     setPlayIncoming(incomingBatters[0]?.id ?? "");
     setPlayMode("swap");
     setOpenSheet("batsman");
+  }
+
+  async function handleAbandonMatch() {
+    const finalReason = abandonReason === "Others" ? customReason : `Match abandoned due to ${abandonReason}`;
+    const abandonedMatch: Match = {
+      ...currentMatch,
+      status: "completed",
+      summary: {
+        ...currentMatch.summary,
+        result: finalReason,
+        completedAt: new Date().toISOString()
+      }
+    };
+    await saveNext(abandonedMatch);
+    setOpenSheet(null);
   }
 
   return (
@@ -225,6 +241,12 @@ export default function MatchPage() {
             </Link>
             <div className="h-4 w-px bg-slate-200 mx-1" />
             <button 
+              onClick={() => setOpenSheet("end_match")}
+              className="rounded-lg bg-rose-50 border border-rose-100 px-3 py-2 text-xs font-bold uppercase tracking-wider text-rose-600 transition hover:bg-rose-100 shadow-sm"
+            >
+              End Match
+            </button>
+            <button 
               onClick={() => reportRef.current?.exportImage()}
               className="rounded-lg bg-white border border-slate-200 px-3 py-2 text-xs font-bold uppercase tracking-wider text-slate-600 transition hover:bg-slate-50 hover:text-emerald-700 shadow-sm"
             >
@@ -237,13 +259,11 @@ export default function MatchPage() {
             />
           </div>
 
-
           <Scoreboard match={currentMatch} />
 
           {activeTab === "scoring" ? (
             <div className="space-y-3">
               <PlayerPanel match={currentMatch} onBatsmanClick={openBatsmanSheet} onBowlerClick={() => setOpenSheet("bowler")} />
-
               {currentMatch.status !== "completed" ? (
                 <BallInputPad
                   onRun={scoreRun}
@@ -255,8 +275,6 @@ export default function MatchPage() {
                   match={currentMatch}
                 />
               ) : null}
-              
-              {/* Hidden reporter for sharing from live tab */}
               <div className="sr-only fixed -left-[9999px] top-0 w-[400px]">
                 <ReportSummary ref={reportRef} match={currentMatch} />
               </div>
@@ -266,9 +284,9 @@ export default function MatchPage() {
               <ReportSummary ref={reportRef} match={currentMatch} />
             </div>
           )}
-
         </div>
       </main>
+
       <BottomNav 
         active={activeTab === "scoring" ? "live" : "scorecard"} 
         onTabChange={(key) => {
@@ -276,6 +294,44 @@ export default function MatchPage() {
           if (key === "scorecard") setActiveTab("scorecard");
         }} 
       />
+
+      <BottomSheet open={openSheet === "end_match"} title="End Match Early" onClose={() => setOpenSheet(null)}>
+        <div className="space-y-5">
+          <p className="text-sm text-slate-500">Why is this match ending before its natural conclusion?</p>
+          <div className="space-y-3">
+             <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Select Reason</p>
+             <div className="grid grid-cols-2 gap-2">
+               {["Rain", "Bad Weather", "Abandoned", "Others"].map((reason) => (
+                 <button 
+                   key={reason}
+                   onClick={() => setAbandonReason(reason)}
+                   className={`rounded-xl border-2 px-4 py-3 text-sm font-bold transition ${abandonReason === reason ? "border-slate-900 bg-slate-900 text-white" : "border-slate-100 bg-slate-50 text-slate-600"}`}
+                 >
+                   {reason}
+                 </button>
+               ))}
+             </div>
+          </div>
+          {abandonReason === "Others" && (
+            <div className="space-y-2">
+              <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Specify Reason</p>
+              <textarea 
+                value={customReason}
+                onChange={(e) => setCustomReason(e.target.value)}
+                placeholder="Type the reason here..."
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-slate-900 focus:bg-white transition-all"
+                rows={3}
+              />
+            </div>
+          )}
+          <button 
+            onClick={handleAbandonMatch}
+            className="w-full rounded-2xl bg-rose-600 py-4 text-sm font-bold text-white shadow-lg shadow-rose-200 transition active:scale-[0.98]"
+          >
+            Confirm & End Match
+          </button>
+        </div>
+      </BottomSheet>
 
       <BottomSheet open={openSheet === "wide"} title="Wide details" onClose={() => setOpenSheet(null)}>
         <div className="space-y-4">
@@ -310,7 +366,7 @@ export default function MatchPage() {
               </label>
             </div>
           ) : null}
-          <button onClick={submitWide} className="w-full rounded-2xl bg-slate-900 px-4 py-4 font-semibold text-white">Record wide</button>
+          <button onClick={submitWide} className="w-full rounded-2xl bg-slate-900 px-4 py-4 font-semibold text-white transition active:scale-[0.98]">Record wide</button>
         </div>
       </BottomSheet>
 
@@ -327,9 +383,8 @@ export default function MatchPage() {
             </div>
           </div>
           <p className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600 border border-slate-200 italic">
-            Penalty: +{currentMatch.rules.noBallRuns} {currentMatch.rules.noBallRuns === 1 ? "run" : "runs"} (defined in rules)
+            Penalty: +{currentMatch.rules.noBallRuns} {currentMatch.rules.noBallRuns === 1 ? "run" : "runs"}
           </p>
-
           <label className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700">
             Run out on this ball
             <input type="checkbox" checked={noBallWicket} onChange={(event) => setNoBallWicket(event.target.checked)} />
@@ -342,14 +397,14 @@ export default function MatchPage() {
               </select>
             </label>
           ) : null}
-          <button onClick={submitNoBall} className="w-full rounded-2xl bg-slate-900 px-4 py-4 font-semibold text-white">Record no ball</button>
+          <button onClick={submitNoBall} className="w-full rounded-2xl bg-slate-900 px-4 py-4 font-semibold text-white transition active:scale-[0.98]">Record no ball</button>
         </div>
       </BottomSheet>
 
       <BottomSheet open={openSheet === "bye"} title={byeKind === "bye" ? "Byes" : "Leg byes"} onClose={() => setOpenSheet(null)}>
         <div className="grid grid-cols-5 gap-2">
           {runOptions.map((value) => (
-            <button key={value} onClick={() => submitBye(value)} className="rounded-2xl bg-slate-100 px-3 py-4 text-sm font-semibold text-slate-900">
+            <button key={value} onClick={() => submitBye(value)} className="rounded-2xl bg-slate-100 px-3 py-4 text-sm font-semibold text-slate-900 transition hover:bg-slate-200">
               {value}
             </button>
           ))}
@@ -382,14 +437,13 @@ export default function MatchPage() {
               </div>
             </div>
           ) : null}
-          <button onClick={submitWicket} className="w-full rounded-2xl bg-slate-900 px-4 py-4 font-semibold text-white">Record wicket</button>
+          <button onClick={submitWicket} className="w-full rounded-2xl bg-slate-900 px-4 py-4 font-semibold text-white transition active:scale-[0.98]">Record wicket</button>
         </div>
       </BottomSheet>
 
       <BowlerSelectionSheet
         open={openSheet === "bowler"}
         title={currentMatch.status === "innings_break" ? "Start the chase" : "Choose the next bowler"}
-        description={currentMatch.status === "innings_break" ? `Target is ${currentMatch.innings[0].runs + 1}. Pick the opening bowler.` : currentInnings.awaitingBowlerChange ? "This over is complete. Select the bowler for the next over." : "Change the current bowler."}
         players={bowlingTeam.players}
         onClose={() => setOpenSheet(null)}
         onSelect={submitBowler}

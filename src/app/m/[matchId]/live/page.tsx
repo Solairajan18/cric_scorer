@@ -4,12 +4,11 @@ import { useMatch } from "@/hooks/useMatch";
 import { Scoreboard } from "@/components/Scoreboard";
 import { ReportSummary } from "@/components/ReportSummary";
 import { OverTimeline } from "@/components/OverTimeline";
-import { use } from "react";
+import { PlayerPanel } from "@/components/PlayerPanel";
 
 export default function PublicLivePage({ params }: { params: { matchId: string } }) {
   const { matchId } = params;
   const { match, loading } = useMatch(matchId);
-
 
   if (loading) {
     return (
@@ -40,7 +39,7 @@ export default function PublicLivePage({ params }: { params: { matchId: string }
           </div>
           <h1 className="font-display text-lg font-black uppercase tracking-widest text-white">Live Scorecard</h1>
         </div>
-        <div className="flex items-center gap-2 rounded-full bg-red-500 px-3 py-1 animate-pulse">
+        <div className="flex items-center gap-2 rounded-full bg-red-500 px-3 py-1 animate-pulse shadow-lg shadow-red-500/20">
            <span className="h-2 w-2 rounded-full bg-white"></span>
            <span className="text-[10px] font-black uppercase tracking-tighter text-white">Live</span>
         </div>
@@ -49,6 +48,9 @@ export default function PublicLivePage({ params }: { params: { matchId: string }
       <div className="space-y-4 px-4 pt-6">
         {/* Main Scorecard */}
         <Scoreboard match={match} />
+
+        {/* Players In Action */}
+        <PlayerPanel match={match} readOnly partnerLabel="Non-Striker" />
         
         {/* Current Over Progress */}
         <div className="app-card overflow-hidden">
@@ -63,6 +65,7 @@ export default function PublicLivePage({ params }: { params: { matchId: string }
         {/* Detailed Stats */}
         <ReportSummary match={match} />
       </div>
+
 
       <footer className="mt-10 px-6 text-center">
         <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">

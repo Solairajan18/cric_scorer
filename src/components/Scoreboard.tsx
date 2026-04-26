@@ -15,16 +15,20 @@ export function Scoreboard({ match }: { match: Match }) {
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <p className="font-display text-[11px] font-bold uppercase tracking-[0.22em] text-[var(--on-primary-container)]">Innings {match.currentInnings} - {normalizeTeamName(batting.name)}</p>
-          <div className="mt-2 flex items-end gap-2">
-            <h1 className="font-display text-5xl font-extrabold leading-none">{innings.runs}/{innings.wickets}</h1>
-            <p className="pb-1 text-base text-emerald-200">({toOvers(innings.legalBalls)})</p>
+          <div className="mt-2 flex items-baseline gap-3">
+            <h1 className="font-display text-5xl font-extrabold leading-none tracking-tighter">{innings.runs}/{innings.wickets}</h1>
+            <p className="text-lg font-medium text-emerald-200">({toOvers(innings.legalBalls)})</p>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold uppercase tracking-widest text-emerald-300/60">vs</span>
+              <span className="text-lg font-bold text-white/90">{normalizeTeamName(bowling.name)}</span>
+            </div>
           </div>
         </div>
         <div className="text-right">
-          <span className={`mb-2 inline-block rounded-sm px-2 py-1 font-display text-[10px] font-bold uppercase text-white ${isCompleted ? "bg-slate-700" : "bg-[var(--on-tertiary-container)]"}`}>
+          <span className={`mb-2 inline-block rounded-sm px-2 py-1 font-display text-[10px] font-bold uppercase text-white ${isCompleted ? "bg-slate-700" : "bg-[var(--on-tertiary-container)] shadow-sm"}`}>
             {isCompleted ? "Match Ended" : "Live Match"}
           </span>
-          <p className="text-sm text-emerald-100">CRR: {innings.legalBalls ? ((innings.runs * 6) / innings.legalBalls).toFixed(2) : "0.00"}</p>
+          <p className="text-sm font-bold text-emerald-100/90">CRR: {innings.legalBalls ? ((innings.runs * 6) / innings.legalBalls).toFixed(2) : "0.00"}</p>
         </div>
       </div>
 
@@ -34,26 +38,23 @@ export function Scoreboard({ match }: { match: Match }) {
         </div>
       )}
 
-      <div className="mt-5 grid grid-cols-3 gap-3">
-        <div className="rounded-lg bg-emerald-900/40 p-3">
-          <p className="font-display text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-200">Bowler</p>
-          <p className="mt-1 break-words text-sm font-semibold text-white">{normalizeTeamName(bowling.name)}</p>
+      <div className="mt-5 grid grid-cols-2 gap-3">
+        <div className="rounded-lg bg-emerald-900/40 p-3 ring-1 ring-white/5">
+          <p className="font-display text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-200/70">Overs Progress</p>
+          <p className="mt-1 text-sm font-black text-white">{toOvers(innings.legalBalls)} <span className="text-[10px] text-emerald-300/40">/</span> {match.oversLimit}</p>
         </div>
-        <div className="rounded-lg bg-emerald-900/40 p-3">
-          <p className="font-display text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-200">Overs</p>
-          <p className="mt-1 text-sm font-semibold text-white">{toOvers(innings.legalBalls)} / {match.oversLimit}</p>
-        </div>
-        <div className="rounded-lg bg-emerald-900/40 p-3">
-          <p className="font-display text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-200">Status</p>
-          <p className="mt-1 text-sm font-semibold text-white">
+        <div className="rounded-lg bg-emerald-900/40 p-3 ring-1 ring-white/5">
+          <p className="font-display text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-200/70">Innings Status</p>
+          <p className="mt-1 text-sm font-black text-white">
             {isCompleted
-              ? "Completed"
+              ? "Match Completed"
               : target
-              ? `${required} needed`
+              ? `${required} runs to win`
               : `Extras: ${innings.extras}`}
           </p>
         </div>
       </div>
+
     </section>
   );
 }
