@@ -554,7 +554,9 @@ export function createMatch(input: MatchCreateInput): Match {
 
   const match: Match = {
     id: makeId("match"),
+    userId: input.userId,
     createdAt: Date.now(),
+
     status: "live",
     oversLimit: sanitizeOvers(input.oversLimit),
     teamA,

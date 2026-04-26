@@ -11,9 +11,13 @@ const DEFAULT_PLAYERS_B = "Ravi\nKarthik\nSuresh\nPradeep\nAnbu\nMohan\nSenthil\
 
 type FormErrors = Partial<Record<"teamAName" | "teamBName" | "teamAPlayers" | "teamBPlayers" | "oversLimit", string>>;
 
+import { useAuth } from "@/context/AuthContext";
+
 export function CreateMatchForm() {
   const router = useRouter();
+  const { user } = useAuth();
   const [teamAName, setTeamAName] = useState("Weekend Warriors");
+
   const [teamBName, setTeamBName] = useState("Sunday Strikers");
   const [teamAPlayers, setTeamAPlayers] = useState(DEFAULT_PLAYERS_A);
   const [teamBPlayers, setTeamBPlayers] = useState(DEFAULT_PLAYERS_B);
@@ -59,6 +63,7 @@ export function CreateMatchForm() {
     setSubmitting(true);
 
     const match = createMatch({
+      userId: user?.uid,
       teamAName: validation.normalized.teamAName,
       teamBName: validation.normalized.teamBName,
       teamAPlayers: validation.normalized.teamAPlayers,
@@ -68,6 +73,7 @@ export function CreateMatchForm() {
       battingFirstTeamId,
       rules: { wideRuns, noBallRuns },
     });
+
 
 
     saveMatchLocal(match);

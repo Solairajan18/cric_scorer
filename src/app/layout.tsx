@@ -17,10 +17,17 @@ export const metadata: Metadata = {
   description: "Fast, mobile-friendly cricket scoring for weekend matches by Solai.",
 };
 
+import { AuthProvider } from "@/context/AuthContext";
+
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body className={`${inter.variable} ${lexend.variable}`}>{children}</body>
+      <body className={`${inter.variable} ${lexend.variable}`}>
+        <AuthProvider>
+          {children}
+        </AuthProvider>
+      </body>
     </html>
   );
 }
+

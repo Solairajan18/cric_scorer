@@ -102,7 +102,9 @@ export type MatchSummary = {
 
 export type Match = {
   id: string;
+  userId?: string;
   createdAt: number;
+
   status: MatchStatus;
   oversLimit: number;
   teamA: Team;
@@ -120,7 +122,9 @@ export type Match = {
 
 
 export type MatchCreateInput = {
+  userId?: string;
   teamAName: string;
+
   teamBName: string;
   teamAPlayers: string[];
   teamBPlayers: string[];
