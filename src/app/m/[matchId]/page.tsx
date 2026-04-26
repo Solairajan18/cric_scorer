@@ -219,14 +219,24 @@ export default function MatchPage() {
       <AppTopBar />
       <main className="mx-auto max-w-2xl px-3 pb-24 pt-20 md:px-6">
         <div className="space-y-4">
-          <div className="flex shrink-0 items-center justify-between gap-3">
-            <Link href="/" className="text-sm font-medium text-slate-600 hover:text-slate-900">Back</Link>
+          <div className="flex shrink-0 items-center gap-2">
+            <Link href="/" className="px-2 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors">
+              Back
+            </Link>
+            <div className="h-4 w-px bg-slate-200 mx-1" />
+            <button 
+              onClick={() => reportRef.current?.exportImage()}
+              className="rounded-lg bg-white border border-slate-200 px-3 py-2 text-xs font-bold uppercase tracking-wider text-slate-600 transition hover:bg-slate-50 hover:text-emerald-700 shadow-sm"
+            >
+              Image
+            </button>
             <ShareBar 
               title={`${currentMatch.teamA.name} vs ${currentMatch.teamB.name}`} 
-              text="Join the live weekend cricket scorecard." 
-              onClick={() => reportRef.current?.exportImage()}
+              text={`Follow the live score of ${currentMatch.teamA.name} vs ${currentMatch.teamB.name}!`}
+              url={typeof window !== 'undefined' ? `${window.location.origin}/m/${currentMatch.id}/live` : ''}
             />
           </div>
+
 
           <Scoreboard match={currentMatch} />
 

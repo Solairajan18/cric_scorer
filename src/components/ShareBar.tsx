@@ -3,17 +3,19 @@
 type Props = {
   title: string;
   text: string;
+  url?: string;
   onClick?: () => void;
 };
 
-export function ShareBar({ title, text, onClick }: Props) {
+export function ShareBar({ title, text, url: propUrl, onClick }: Props) {
   async function handleShare() {
     if (onClick) {
       onClick();
       return;
     }
 
-    const url = window.location.href;
+    const url = propUrl || window.location.href;
+
     if (navigator.share) {
       await navigator.share({ title, text, url });
       return;
