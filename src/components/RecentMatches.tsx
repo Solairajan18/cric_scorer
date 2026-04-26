@@ -10,15 +10,24 @@ import { useAuth } from "@/context/AuthContext";
 
 export function RecentMatches() {
   const [matches, setMatches] = useState<Match[]>([]);
+  const [loading, setLoading] = useState(false);
   const { user } = useAuth();
 
   useEffect(() => {
     async function load() {
       if (user) {
-        const cloudMatches = await getUserMatches(user.uid);
-        if (cloudMatches.length > 0) {
-          setMatches(cloudMatches.slice(0, 5));
-          return;
+        setLoading(true);
+        try {
+          const cloudMatches = await getUserMatches(user.uid);
+          console.log("[cric-scorer] Cloud matches fetched:", cloudMatches.length);
+          if (cloudMatches.length > 0) {
+            setMatches(cloudMatches.slice(0, 5));
+            return;
+          }
+        } catch (err) {
+          console.error("[cric-scorer] Failed to fetch cloud matches:", err);
+        } finally {
+          setLoading(false);
         }
       }
       setMatches(listMatchesLocal().slice(0, 4));
@@ -26,7 +35,7 @@ export function RecentMatches() {
     void load();
   }, [user]);
 
-
+  if (loading) return <div className="p-4 text-center text-sm text-slate-500">Loading your matches...</div>;
   if (!matches.length) return null;
 
   return (
