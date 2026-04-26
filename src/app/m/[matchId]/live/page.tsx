@@ -6,9 +6,10 @@ import { ReportSummary } from "@/components/ReportSummary";
 import { OverTimeline } from "@/components/OverTimeline";
 import { use } from "react";
 
-export default function PublicLivePage({ params }: { params: Promise<{ matchId: string }> }) {
-  const { matchId } = use(params);
+export default function PublicLivePage({ params }: { params: { matchId: string } }) {
+  const { matchId } = params;
   const { match, loading } = useMatch(matchId);
+
 
   if (loading) {
     return (
