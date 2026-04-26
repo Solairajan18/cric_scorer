@@ -264,17 +264,15 @@ export default function MatchPage() {
           {activeTab === "scoring" ? (
             <div className="space-y-3">
               <PlayerPanel match={currentMatch} onBatsmanClick={openBatsmanSheet} onBowlerClick={() => setOpenSheet("bowler")} />
-              {currentMatch.status !== "completed" ? (
-                <BallInputPad
-                  onRun={scoreRun}
-                  onWide={() => guardedAction(() => setOpenSheet("wide"))}
-                  onNoBall={() => guardedAction(() => setOpenSheet("noBall"))}
-                  onBye={openByeSheet}
-                  onWicket={() => guardedAction(() => setOpenSheet("wicket"))}
-                  onUndo={() => void saveNext(undoLastAction(currentMatch))}
-                  match={currentMatch}
-                />
-              ) : null}
+              <BallInputPad
+                onRun={scoreRun}
+                onWide={() => guardedAction(() => setOpenSheet("wide"))}
+                onNoBall={() => guardedAction(() => setOpenSheet("noBall"))}
+                onBye={openByeSheet}
+                onWicket={() => guardedAction(() => setOpenSheet("wicket"))}
+                onUndo={() => void saveNext(undoLastAction(currentMatch))}
+                match={currentMatch}
+              />
               <div className="sr-only fixed -left-[9999px] top-0 w-[400px]">
                 <ReportSummary ref={reportRef} match={currentMatch} />
               </div>
