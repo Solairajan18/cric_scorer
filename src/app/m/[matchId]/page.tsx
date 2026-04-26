@@ -442,10 +442,12 @@ export default function MatchPage() {
       <BowlerSelectionSheet
         open={openSheet === "bowler"}
         title={currentMatch.status === "innings_break" ? "Start the chase" : "Choose the next bowler"}
+        description={currentMatch.status === "innings_break" ? `Target is ${currentMatch.innings[0].runs + 1}. Pick the opening bowler.` : currentInnings.awaitingBowlerChange ? "This over is complete. Select the bowler for the next over." : "Change the current bowler."}
         players={bowlingTeam.players}
         onClose={() => setOpenSheet(null)}
         onSelect={submitBowler}
       />
+
 
       <BatsmanActionSheet
         open={openSheet === "batsman"}
