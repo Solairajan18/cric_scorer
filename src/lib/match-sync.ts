@@ -1,4 +1,4 @@
-import { doc, onSnapshot, setDoc } from "firebase/firestore";
+import { collection, doc, onSnapshot, query, setDoc, where, getDocs, orderBy } from "firebase/firestore";
 import { Match } from "@/types/match";
 import { getFirestoreDb, isFirebaseEnabled } from "@/lib/firebase";
 
@@ -25,4 +25,19 @@ export function subscribeToMatch(matchId: string, callback: (match: Match | null
 
   return unsubscribe;
 }
+
+export async function getUserMatches(userId: string): Promise<Match[]> {
+  if (!isFirebaseEnabled()) return [];
+  
+  const db = getFirestoreDb();
+  const q = query(
+    collection(db, "matches"),
+    where("userId", "==", userId),
+    orderBy("createdAt", "desc")
+  );
+  
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map(doc => doc.data() as Match);
+}
+
 

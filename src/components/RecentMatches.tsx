@@ -5,12 +5,27 @@ import { useEffect, useState } from "react";
 import { Match } from "@/types/match";
 import { listMatchesLocal, normalizeTeamName, toOvers } from "@/lib/match-engine";
 
+import { getUserMatches } from "@/lib/match-sync";
+import { useAuth } from "@/context/AuthContext";
+
 export function RecentMatches() {
   const [matches, setMatches] = useState<Match[]>([]);
+  const { user } = useAuth();
 
   useEffect(() => {
-    setMatches(listMatchesLocal().slice(0, 4));
-  }, []);
+    async function load() {
+      if (user) {
+        const cloudMatches = await getUserMatches(user.uid);
+        if (cloudMatches.length > 0) {
+          setMatches(cloudMatches.slice(0, 5));
+          return;
+        }
+      }
+      setMatches(listMatchesLocal().slice(0, 4));
+    }
+    void load();
+  }, [user]);
+
 
   if (!matches.length) return null;
 
