@@ -4,14 +4,16 @@ import { getFirestoreDb, isFirebaseEnabled } from "@/lib/firebase";
 
 export async function pushMatch(match: Match) {
   if (!isFirebaseEnabled()) return;
+  console.log("[cric-scorer] Attempting to push match to Firestore:", match.id, "User:", match.userId);
   try {
     const db = getFirestoreDb();
     await setDoc(doc(db, "matches", match.id), match);
+    console.log("[cric-scorer] Firestore sync successful!");
   } catch (err) {
-    // Local save already happened — log but don't crash the scorer
-    console.warn("[cric-scorer] Firestore sync failed:", err);
+    console.error("[cric-scorer] Firestore sync failed:", err);
   }
 }
+
 
 export function subscribeToMatch(matchId: string, callback: (match: Match | null) => void) {
   if (!isFirebaseEnabled()) {
