@@ -98,7 +98,9 @@ export type MatchSummary = {
   topBatter?: { name: string; runs: number };
   topBowler?: { name: string; wickets: number };
   highlight: string;
+  completedAt?: string;
 };
+
 
 export type Match = {
   id: string;
