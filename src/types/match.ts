@@ -100,9 +100,9 @@ export type MatchAction =
   | { type: "start_second_innings"; bowlerId: string };
 
 export type MatchSummary = {
-  result: string;
-  topBatter?: { name: string; runs: number };
-  topBowler?: { name: string; wickets: number };
+  result?: string;
+  topBatter?: { id: string; name: string; runs: number };
+  topBowler?: { id: string; name: string; wickets: number; runs: number };
   highlight?: string;
   completedAt?: string;
   awards?: {
@@ -113,18 +113,6 @@ export type MatchSummary = {
   };
 };
 
-export type MatchSummary = {
-  result?: string;
-  topBatter?: { id: string; name: string; runs: number };
-  topBowler?: { id: string; name: string; wickets: number; runs: number };
-  completedAt?: string;
-  awards?: {
-    potm?: string;
-    bestBatter?: string;
-    bestBowler?: string;
-    bestFielder?: string;
-  };
-};
 
 export type Match = {
   id: string;
