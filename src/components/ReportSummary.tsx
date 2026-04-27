@@ -25,9 +25,11 @@ function downloadBlob(blob: Blob, filename: string) {
 
 function getDetailedDismissal(match: Match, event: BallEvent) {
   if (!event.dismissal) return "not out";
-  const { type, fielderId, bowlerId } = event.dismissal;
+  const { type, fielderId } = event.dismissal;
+  const bowlerId = event.bowlerId;
   const bowlerName = getPlayerName(match, bowlerId);
   const fielderName = fielderId ? getPlayerName(match, fielderId) : "";
+
 
   switch (type) {
     case "caught": return `c ${fielderName} b ${bowlerName}`;
