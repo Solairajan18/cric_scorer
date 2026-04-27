@@ -492,25 +492,20 @@ function reduceAction(match: Match, action: MatchAction) {
 
 
 export function finalizeMatchState(match: Match) {
-  const innings = match.innings[match.currentInnings - 1];
   const inningsOne = match.innings[0];
   const inningsTwo = match.innings[1];
   const target = inningsOne.runs + 1;
 
-  if (match.currentInnings === 2 && inningsTwo.runs >= target) {
-    innings.completed = true;
-    innings.awaitingBowlerChange = false;
-    match.status = "completed";
-    match.winnerTeamId = inningsTwo.battingTeamId;
-  }
-
-  if (!innings.completed && (isAllOut(match, innings) || oversDone(match, innings))) {
-    innings.completed = true;
-    innings.awaitingBowlerChange = false;
-    if (match.currentInnings === 1) {
-      match.currentInnings = 2;
-      match.status = "innings_break";
-    } else {
+  // Determine winner and status before building summary
+  if (match.currentInnings === 2) {
+    if (inningsTwo.runs >= target) {
+      inningsTwo.completed = true;
+      inningsTwo.awaitingBowlerChange = false;
+      match.status = "completed";
+      match.winnerTeamId = inningsTwo.battingTeamId;
+    } else if (inningsTwo.completed || isAllOut(match, inningsTwo) || oversDone(match, inningsTwo)) {
+      inningsTwo.completed = true;
+      inningsTwo.awaitingBowlerChange = false;
       match.status = "completed";
       if (inningsTwo.runs > inningsOne.runs) {
         match.winnerTeamId = inningsTwo.battingTeamId;
@@ -520,16 +515,23 @@ export function finalizeMatchState(match: Match) {
         match.winnerTeamId = "tie";
       }
     }
-  } else if (match.currentInnings === 2 && match.status !== "completed") {
-    match.status = "live";
+  }
+
+  if (match.currentInnings === 1 && (isAllOut(match, inningsOne) || oversDone(match, inningsOne))) {
+    inningsOne.completed = true;
+    inningsOne.awaitingBowlerChange = false;
+    match.currentInnings = 2;
+    match.status = "innings_break";
   }
 
   match.summary = buildSummary(match);
 }
 
+
 function buildSummary(match: Match): MatchSummary {
   const inningsOne = match.innings[0];
   const inningsTwo = match.innings[1];
+  const isCompleted = match.status === "completed";
 
   const topBatter = [match.teamA, match.teamB]
     .flatMap((team) =>
@@ -561,17 +563,21 @@ function buildSummary(match: Match): MatchSummary {
     }))
     .sort((a, b) => b.score - a.score)[0];
 
-  let result = "Match Draw";
-  if (match.winnerTeamId === "tie") {
-    result = "Match Tied";
-  } else if (match.winnerTeamId) {
-    const winner = getTeam(match, match.winnerTeamId);
-    if (match.winnerTeamId === match.battingFirstTeamId) {
-      const margin = inningsOne.runs - inningsTwo.runs;
-      result = `${winner.name} won by ${margin} ${margin === 1 ? "run" : "runs"}`;
+  let result = undefined;
+  if (isCompleted) {
+    if (match.winnerTeamId === "tie") {
+      result = "Match Tied";
+    } else if (match.winnerTeamId) {
+      const winner = getTeam(match, match.winnerTeamId);
+      if (match.winnerTeamId === match.battingFirstTeamId) {
+        const margin = inningsOne.runs - inningsTwo.runs;
+        result = `${winner.name} won by ${margin} ${margin === 1 ? "run" : "runs"}`;
+      } else {
+        const margin = 10 - inningsTwo.wickets;
+        result = `${winner.name} won by ${margin} ${margin === 1 ? "wicket" : "wickets"}`;
+      }
     } else {
-      const margin = 10 - inningsTwo.wickets;
-      result = `${winner.name} won by ${margin} ${margin === 1 ? "wicket" : "wickets"}`;
+      result = "Match Drawn";
     }
   }
 
@@ -579,14 +585,15 @@ function buildSummary(match: Match): MatchSummary {
     result,
     topBatter,
     topBowler,
-    completedAt: new Date().toISOString(),
-    awards: {
+    completedAt: isCompleted ? new Date().toISOString() : undefined,
+    awards: isCompleted ? {
       potm: potmCandidate?.name,
       bestBatter: topBatter?.name,
       bestBowler: topBowler?.name,
-    }
+    } : undefined
   };
 }
+
 
 
 export function createMatch(input: MatchCreateInput): Match {
