@@ -2,8 +2,7 @@
 
 import { forwardRef, useImperativeHandle, useRef } from "react";
 import { toBlob } from "html-to-image";
-import Link from "next/link";
-import { Match } from "@/types/match";
+import { Match, BallEvent } from "@/types/match";
 import { 
   getPlayerName, 
   normalizeTeamName, 
@@ -22,6 +21,25 @@ function downloadBlob(blob: Blob, filename: string) {
   anchor.download = filename;
   anchor.click();
   URL.revokeObjectURL(url);
+}
+
+function getDetailedDismissal(match: Match, event: BallEvent) {
+  if (!event.dismissal) return "not out";
+  const { type, fielderId, bowlerId } = event.dismissal;
+  const bowlerName = getPlayerName(match, bowlerId);
+  const fielderName = fielderId ? getPlayerName(match, fielderId) : "";
+
+  switch (type) {
+    case "caught": return `c ${fielderName} b ${bowlerName}`;
+    case "bowled": return `b ${bowlerName}`;
+    case "lbw": return `lbw b ${bowlerName}`;
+    case "stumped": return `st ${fielderName} b ${bowlerName}`;
+    case "run_out": return `run out (${fielderName || "direct"})`;
+    case "hit_wicket": return `hit wicket b ${bowlerName}`;
+    case "retired_hurt": return `retired hurt`;
+    case "retired_out": return `retired out`;
+    default: return type.replace("_", " ");
+  }
 }
 
 export const ReportSummary = forwardRef(function ReportSummary({ match }: { match: Match }, ref) {
@@ -45,10 +63,18 @@ export const ReportSummary = forwardRef(function ReportSummary({ match }: { matc
     exportImage: handleExport
   }));
 
+  const isCompleted = match.status === "completed";
 
   return (
     <div className="space-y-6">
       <div ref={exportRef} className="bg-white p-0 space-y-4 border border-slate-200 shadow-sm rounded-lg overflow-hidden">
+        {/* Match Header for Image Export */}
+        <div className="bg-slate-900 text-white p-6 text-center border-b border-white/10">
+          <h1 className="font-display text-xl font-black uppercase tracking-[0.2em] mb-1">Match Report</h1>
+          <p className="text-emerald-400 font-bold text-sm tracking-widest">{normalizeTeamName(match.teamA.name)} vs {normalizeTeamName(match.teamB.name)}</p>
+          {match.summary?.result && <p className="mt-4 text-xs font-medium text-slate-400 bg-white/5 py-2 rounded-full ring-1 ring-white/10">{match.summary.result}</p>}
+        </div>
+
         {match.innings.map((innings, idx) => {
           if (idx === 1 && !innings.completed && innings.legalBalls === 0 && innings.runs === 0) return null;
 
@@ -65,147 +91,105 @@ export const ReportSummary = forwardRef(function ReportSummary({ match }: { matc
           return (
             <section key={idx} className="space-y-0">
               {/* Team Header */}
-              <div className="bg-[#0b3d2e] text-white px-4 py-2.5 flex justify-between items-center">
-                <h2 className="font-bold text-base">{teamName}</h2>
-                <p className="font-bold text-base">{innings.runs}-{innings.wickets} <span className="font-normal text-sm opacity-90">({toOvers(innings.legalBalls)} Ov)</span></p>
+              <div className="bg-[#064e3b] text-white px-4 py-3 flex justify-between items-center border-b border-white/10">
+                <h2 className="font-bold text-sm uppercase tracking-widest">{teamName}</h2>
+                <p className="font-black text-lg">{innings.runs}/{innings.wickets} <span className="font-medium text-xs opacity-60 ml-1">({toOvers(innings.legalBalls)} Ov)</span></p>
               </div>
 
               {/* Batter Table */}
               <div className="w-full">
-                <div className="grid grid-cols-[1fr_40px_40px_40px_40px_60px_20px] bg-[#f2f2f2] px-4 py-2 text-[13px] font-bold text-[#333]">
+                <div className="grid grid-cols-[1fr_35px_35px_35px_35px_55px] bg-slate-50 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-500 border-b border-slate-100">
                   <div>Batter</div>
                   <div className="text-right">R</div>
                   <div className="text-right">B</div>
                   <div className="text-right">4s</div>
                   <div className="text-right">6s</div>
                   <div className="text-right">SR</div>
-                  <div></div>
                 </div>
-                <div className="divide-y divide-slate-100">
+                <div className="divide-y divide-slate-50">
                   {battingPlayers.map(player => {
                     const stats = innings.batsmen[player.id];
                     if (!stats || (stats.balls === 0 && !stats.out && !stats.retiredHurt)) return null;
                     
-                    const sr = stats.balls > 0 ? ((stats.runs / stats.balls) * 100).toFixed(2) : "0.00";
-                    const dismissal = match.events.find(e => e.inningsNumber === idx + 1 && e.dismissal?.playerId === player.id)?.displaySequence || (stats.out ? "out" : stats.retiredHurt ? "retired hurt" : "batting");
+                    const sr = stats.balls > 0 ? ((stats.runs / stats.balls) * 100).toFixed(1) : "0.0";
+                    const dismissalEvent = match.events.find(e => e.inningsNumber === idx + 1 && e.dismissal?.playerId === player.id);
+                    const dismissalLabel = dismissalEvent ? getDetailedDismissal(match, dismissalEvent) : (stats.out ? "out" : stats.retiredHurt ? "retired hurt" : "not out");
 
                     return (
-                      <div key={player.id} className="grid grid-cols-[1fr_40px_40px_40px_40px_60px_20px] px-4 py-2.5 text-[14px] items-center">
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-1 min-w-0">
-                          <span className="text-[#064e3b] font-medium truncate">{player.name}</span>
-                          <span className="text-[#666] text-[12px] truncate">{dismissal}</span>
+                      <div key={player.id} className="grid grid-cols-[1fr_35px_35px_35px_35px_55px] px-4 py-3 text-[12px] items-center hover:bg-slate-50/50 transition-colors">
+                        <div className="flex flex-col min-w-0 pr-2">
+                          <span className="text-slate-900 font-bold truncate">{player.name}</span>
+                          <span className="text-slate-400 text-[10px] font-medium italic truncate">{dismissalLabel}</span>
                         </div>
-                        <div className="text-right font-bold text-[#333]">{stats.runs}</div>
-                        <div className="text-right text-[#333]">{stats.balls}</div>
-                        <div className="text-right text-[#333]">{stats.fours}</div>
-                        <div className="text-right text-[#333]">{stats.sixes}</div>
-                        <div className="text-right text-[#333]">{sr}</div>
-                        <div className="text-right text-[#ccc] text-xs pl-2">❯</div>
+                        <div className="text-right font-black text-slate-900">{stats.runs}</div>
+                        <div className="text-right text-slate-500 font-medium">{stats.balls}</div>
+                        <div className="text-right text-slate-400">{stats.fours}</div>
+                        <div className="text-right text-slate-400">{stats.sixes}</div>
+                        <div className="text-right text-slate-400 font-bold">{sr}</div>
                       </div>
                     );
                   })}
                 </div>
                 {/* Extras */}
-                <div className="grid grid-cols-[1fr_auto] px-4 py-2.5 border-t border-slate-100 text-[14px]">
-                  <div className="font-bold text-[#333]">Extras</div>
-                  <div className="text-right">
-                    <span className="font-bold text-[#333] mr-2">{innings.extras}</span>
-                    <span className="text-[#666] text-[13px]">(b {extras.b}, lb {extras.lb}, w {extras.w}, nb {extras.nb}, p {extras.p})</span>
+                <div className="grid grid-cols-[1fr_auto] px-4 py-3 border-t border-slate-100 text-[12px] bg-slate-50/30">
+                  <div className="font-bold text-slate-900 uppercase text-[10px] tracking-widest">Extras</div>
+                  <div className="text-right flex items-center gap-2">
+                    <span className="font-black text-slate-900">{innings.extras}</span>
+                    <span className="text-slate-400 text-[10px] font-medium">(b {extras.b}, lb {extras.lb}, w {extras.w}, nb {extras.nb})</span>
                   </div>
                 </div>
-                {/* Total */}
-                <div className="grid grid-cols-[1fr_auto] px-4 py-2.5 border-t border-slate-100 text-[14px]">
-                  <div className="font-bold text-[#333]">Total</div>
-                  <div className="text-right">
-                    <span className="font-bold text-[#333]">{innings.runs}-{innings.wickets}</span>
-                    <span className="text-[#333] text-[13px] ml-1">({toOvers(innings.legalBalls)} Overs, RR: {rr})</span>
-                  </div>
-                </div>
-                {/* Yet to Bat */}
-                {yetToBat.length > 0 && (
-                  <div className="px-4 py-2.5 border-t border-slate-100 text-[14px] flex gap-2">
-                    <div className="font-bold text-[#333] whitespace-nowrap">Yet to Bat</div>
-                    <div className="text-[#064e3b] text-[13px]">
-                      {yetToBat.map(p => p.name).join(", ")}
-                    </div>
-                  </div>
-                )}
               </div>
 
               {/* Bowler Table */}
-              <div className="w-full pt-4">
-                <div className="grid grid-cols-[1fr_40px_40px_40px_40px_40px_40px_60px_20px] bg-[#f2f2f2] px-4 py-2 text-[13px] font-bold text-[#333]">
+              <div className="w-full">
+                <div className="grid grid-cols-[1fr_35px_35px_35px_35px_55px] bg-slate-50 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-500 border-y border-slate-100">
                   <div>Bowling</div>
                   <div className="text-right">O</div>
                   <div className="text-right">M</div>
                   <div className="text-right">R</div>
                   <div className="text-right">W</div>
-                  <div className="text-right">NB</div>
-                  <div className="text-right">WD</div>
                   <div className="text-right">ECO</div>
-                  <div></div>
                 </div>
-                <div className="divide-y divide-slate-100">
+                <div className="divide-y divide-slate-50">
                   {bowlingPlayers.map(player => {
                     const stats = bowlerStats[player.id];
                     if (!stats || stats.overs === "0.0") return null;
 
                     return (
-                      <div key={player.id} className="grid grid-cols-[1fr_40px_40px_40px_40px_40px_40px_60px_20px] px-4 py-2.5 text-[14px] items-center">
-                        <div className="text-[#0059B2] font-medium truncate">{player.name}</div>
-                        <div className="text-right text-[#333]">{stats.overs}</div>
-                        <div className="text-right text-[#333]">{stats.maidens}</div>
-                        <div className="text-right text-[#333]">{stats.runs}</div>
-                        <div className="text-right font-bold text-[#333]">{stats.wickets}</div>
-                        <div className="text-right text-[#333]">{stats.nb}</div>
-                        <div className="text-right text-[#333]">{stats.wd}</div>
-                        <div className="text-right text-[#333]">{stats.eco}</div>
-                        <div className="text-right text-[#ccc] text-xs pl-2">❯</div>
+                      <div key={player.id} className="grid grid-cols-[1fr_35px_35px_35px_35px_55px] px-4 py-3 text-[12px] items-center hover:bg-slate-50/50 transition-colors">
+                        <div className="text-slate-900 font-bold truncate">{player.name}</div>
+                        <div className="text-right text-slate-900 font-medium">{stats.overs}</div>
+                        <div className="text-right text-slate-400">{stats.maidens}</div>
+                        <div className="text-right text-slate-900 font-medium">{stats.runs}</div>
+                        <div className="text-right font-black text-emerald-700">{stats.wickets}</div>
+                        <div className="text-right text-slate-400 font-bold">{stats.eco}</div>
                       </div>
                     );
                   })}
                 </div>
               </div>
 
-              {/* Fall of Wickets */}
-              {fows.length > 0 && (
-                <div className="w-full pt-4">
-                  <div className="grid grid-cols-[1fr_100px_100px] bg-[#f2f2f2] px-4 py-2 text-[13px] font-bold text-[#333]">
-                    <div>Fall of Wickets</div>
-                    <div className="text-center">Score</div>
-                    <div className="text-right pr-4">Over</div>
-                  </div>
-                  <div className="divide-y divide-slate-100">
-                    {fows.map((fow, fIdx) => (
-                      <div key={fIdx} className="grid grid-cols-[1fr_100px_100px] px-4 py-2.5 text-[14px] items-center">
-                        <div className="text-[#064e3b] font-medium">{fow.playerName}</div>
-                        <div className="text-center text-[#333]">{fow.score}-{fIdx + 1}</div>
-                        <div className="text-right text-[#333] pr-4">{fow.overs}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Partnerships - Simplified to match clean style */}
+              {/* Partnerships */}
               {partnerships.length > 0 && (
-                <div className="w-full pt-4 pb-4">
-                  <div className="bg-[#f2f2f2] px-4 py-2 text-[13px] font-bold text-[#333]">
+                <div className="w-full border-t border-slate-100">
+                  <div className="bg-slate-50 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-500 border-b border-slate-100">
                     Partnerships
                   </div>
-                  <div className="divide-y divide-slate-100">
+                  <div className="divide-y divide-slate-50">
                     {partnerships.map((p, pIdx) => (
-                      <div key={pIdx} className="px-4 py-3 flex items-center justify-between text-[13px]">
-                        <div className="w-[45%] text-right pr-2">
-                            <span className="font-bold text-[#333]">{p.batter1}</span>
-                            <span className="text-[#666] ml-1">{p.batter1Runs}({p.batter1Balls})</span>
+                      <div key={pIdx} className="px-4 py-3 flex items-center justify-between text-[11px] hover:bg-slate-50/30">
+                        <div className="w-[42%] text-right">
+                            <p className="font-bold text-slate-900 truncate">{p.batter1}</p>
+                            <p className="text-slate-400 text-[10px]">{p.batter1Runs} ({p.batter1Balls})</p>
                         </div>
                         <div className="flex-1 flex flex-col items-center">
-                            <p className="text-[#333] font-bold">{p.totalRuns} ({p.totalBalls})</p>
+                            <div className="h-px w-8 bg-slate-200 mb-1" />
+                            <p className="text-emerald-700 font-black">{p.totalRuns}</p>
+                            <p className="text-[9px] text-slate-400 font-bold">{p.totalBalls}b</p>
                         </div>
-                        <div className="w-[45%] text-left pl-2">
-                            <span className="font-bold text-[#333]">{p.batter2}</span>
-                            <span className="text-[#666] ml-1">{p.batter2Runs}({p.batter2Balls})</span>
+                        <div className="w-[42%] text-left">
+                            <p className="font-bold text-slate-900 truncate">{p.batter2}</p>
+                            <p className="text-slate-400 text-[10px]">{p.batter2Runs} ({p.batter2Balls})</p>
                         </div>
                       </div>
                     ))}
@@ -215,6 +199,28 @@ export const ReportSummary = forwardRef(function ReportSummary({ match }: { matc
             </section>
           );
         })}
+
+        {/* Awards Section (Footer of the Image) */}
+        {isCompleted && (
+          <div className="bg-slate-900 text-white p-6 rounded-b-lg border-t border-white/10">
+            <h3 className="text-center font-display text-xs font-black uppercase tracking-[0.3em] mb-6 text-emerald-400">Match Awards</h3>
+            <div className="grid grid-cols-2 gap-4">
+               {[
+                 { label: "Player of the Match", name: match.summary?.awards?.potm || "To be decided", icon: "⭐" },
+                 { label: "Best Batsman", name: match.summary?.awards?.bestBatter || match.summary?.topBatter?.name || "N/A", icon: "🏏" },
+                 { label: "Best Bowler", name: match.summary?.awards?.bestBowler || match.summary?.topBowler?.name || "N/A", icon: "🥎" },
+                 { label: "Best Fielder", name: match.summary?.awards?.bestFielder || "N/A", icon: "🧤" },
+               ].map((award, i) => (
+                 <div key={i} className="bg-white/5 rounded-2xl p-4 border border-white/10 flex flex-col items-center text-center">
+                    <span className="text-xl mb-2">{award.icon}</span>
+                    <p className="text-[8px] font-black uppercase tracking-widest text-slate-500 mb-1">{award.label}</p>
+                    <p className="text-xs font-bold text-white truncate w-full">{award.name}</p>
+                 </div>
+               ))}
+            </div>
+            <p className="text-center mt-8 text-[8px] font-black uppercase tracking-[0.4em] text-white/20 italic">Generated by Solai&apos;s Cric Scorer</p>
+          </div>
+        )}
       </div>
     </div>
   );

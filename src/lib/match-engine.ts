@@ -241,6 +241,7 @@ function dismissalFromOutcome(outcome: BallOutcome): Dismissal | undefined {
       type: outcome.wicketType,
       creditedToBowler: isDismissalCreditedToBowler(outcome),
       onIllegalDelivery: false,
+      fielderId: outcome.fielderId,
     };
   }
 
@@ -259,7 +260,7 @@ function dismissalFromOutcome(outcome: BallOutcome): Dismissal | undefined {
 function labelForOutcome(outcome: BallOutcome) {
   switch (outcome.type) {
     case "run":
-      return `${outcome.runs}`;
+      return outcome.isOverthrow ? `${outcome.runs}(OT)` : `${outcome.runs}`;
     case "wide":
       return outcome.totalExtras > 1 ? `Wd+${outcome.totalExtras - 1}` : "Wd";
     case "no_ball":
@@ -269,9 +270,10 @@ function labelForOutcome(outcome: BallOutcome) {
     case "leg_bye":
       return `LB${outcome.runs}`;
     case "wicket":
-      return `W-${outcome.wicketType.replace("_", " ")}`;
+      return `W-${outcome.wicketType.split("_").map(s => s[0].toUpperCase()).join("")}`;
   }
 }
+
 
 function shouldRotateStrike(outcome: BallOutcome) {
   return totalRunsForOutcome(outcome) % 2 === 1;
@@ -309,12 +311,16 @@ function validateOutcome(outcome: BallOutcome) {
   }
 }
 
-function applyDismissal(match: Match, innings: Innings, dismissal: Dismissal) {
+function applyDismissal(match: Match, innings: Innings, dismissal: Dismissal, nextStrikerId?: string) {
   const dismissed = innings.batsmen[dismissal.playerId];
   if (!dismissed) return;
 
   if (dismissal.type === "retired_hurt") {
     dismissed.retiredHurt = true;
+  } else if (dismissal.type === "retired_out") {
+    dismissed.out = true;
+    dismissed.retiredOut = true;
+    innings.wickets += 1;
   } else {
     dismissed.out = true;
     innings.wickets += 1;
@@ -324,12 +330,17 @@ function applyDismissal(match: Match, innings: Innings, dismissal: Dismissal) {
     innings.bowlers[innings.currentBowlerId].wickets += 1;
   }
 
-  if (dismissal.playerId === innings.strikerId) {
-    innings.strikerId = nextAvailableBatter(match, innings)?.id ?? innings.strikerId;
-  } else if (dismissal.playerId === innings.nonStrikerId) {
-    innings.nonStrikerId = nextAvailableBatter(match, innings)?.id ?? innings.nonStrikerId;
+  // Handle strike rotation after wicket
+  const isStrikerDismissed = dismissal.playerId === innings.strikerId;
+  const nextBatter = nextStrikerId || nextAvailableBatter(match, innings)?.id || "";
+
+  if (isStrikerDismissed) {
+    innings.strikerId = nextBatter;
+  } else {
+    innings.nonStrikerId = nextBatter;
   }
 }
+
 
 function applyBallToState(match: Match, outcome: BallOutcome) {
   validateOutcome(outcome);
@@ -361,12 +372,12 @@ function applyBallToState(match: Match, outcome: BallOutcome) {
   if (bowler) {
     if (legal) bowler.balls += 1;
     bowler.runs += bowlingRunsCharged(outcome);
-    if (outcome.type === "wide") bowler.wides += outcome.totalExtras;
-    if (outcome.type === "no_ball") bowler.noBalls += outcome.extraRuns;
+    if (outcome.type === "wide") bowler.wides += (outcome as any).totalExtras ?? 0;
+    if (outcome.type === "no_ball") bowler.noBalls += (outcome as any).extraRuns ?? 0;
   }
 
   if (dismissal) {
-    applyDismissal(match, innings, dismissal);
+    applyDismissal(match, innings, dismissal, (outcome as any).nextStrikerId);
   }
 
   if (shouldRotateStrike(outcome) && dismissal?.type !== "retired_hurt") {
@@ -382,9 +393,9 @@ function applyBallToState(match: Match, outcome: BallOutcome) {
     id: makeId("event"),
     inningsNumber: match.currentInnings,
     overNumber: Math.floor(legalBefore / 6) + 1,
-    ballInOver: legal ? (legalBefore % 6) + 1 : legalBefore % 6,
+    ballInOver: legal ? (legalBefore % 6) + 1 : (legalBefore % 6) || 6,
     displaySequence: labelForOutcome(outcome),
-    kind: outcomeKind(outcome),
+    kind: (outcome.type === "run" && outcome.isOverthrow) ? "overthrow" : outcomeKind(outcome),
     legal,
     totalRuns,
     batterRuns,
@@ -406,6 +417,7 @@ function applyBallToState(match: Match, outcome: BallOutcome) {
   finalizeMatchState(match);
   return match;
 }
+
 
 function startSecondInningsInternal(match: Match, bowlerId: string) {
   match.status = "live";
@@ -444,12 +456,29 @@ function retireHurtInternal(match: Match, playerId: string, replacementPlayerId:
   return match;
 }
 
+function updateRulesInternal(match: Match, rules: Partial<MatchRules>, oversLimit?: number) {
+  match.rules = { ...match.rules, ...rules };
+  if (oversLimit) match.oversLimit = sanitizeOvers(oversLimit);
+  finalizeMatchState(match);
+  return match;
+}
+
+function setKeeperInternal(match: Match, fielderId: string) {
+  const innings = match.innings[match.currentInnings - 1];
+  innings.wicketkeeperId = fielderId;
+  return match;
+}
+
 function reduceAction(match: Match, action: MatchAction) {
   switch (action.type) {
     case "ball":
       return applyBallToState(match, action.outcome);
     case "set_bowler":
       return setBowlerInternal(match, action.bowlerId);
+    case "set_keeper":
+      return setKeeperInternal(match, action.fielderId);
+    case "update_rules":
+      return updateRulesInternal(match, action.rules, action.oversLimit);
     case "swap_player":
       return swapPlayerInternal(match, action.slot, action.incomingPlayerId);
     case "retire_hurt":
@@ -459,56 +488,8 @@ function reduceAction(match: Match, action: MatchAction) {
   }
 }
 
-function buildSummary(match: Match): MatchSummary {
-  const teams = { A: match.teamA, B: match.teamB };
-  const inningsOne = match.innings[0];
-  const inningsTwo = match.innings[1];
 
-  const topBatterCandidate = [match.teamA, match.teamB]
-    .flatMap((team) =>
-      team.players.map((player) => ({
-        name: player.name,
-        runs: Math.max(match.innings[0].batsmen[player.id]?.runs ?? 0, match.innings[1].batsmen[player.id]?.runs ?? 0),
-      })),
-    )
-    .sort((a, b) => b.runs - a.runs)[0];
 
-  const topBowlerCandidate = [match.teamA, match.teamB]
-    .flatMap((team) =>
-      team.players.map((player) => ({
-        name: player.name,
-        wickets: Math.max(match.innings[0].bowlers[player.id]?.wickets ?? 0, match.innings[1].bowlers[player.id]?.wickets ?? 0),
-      })),
-    )
-    .sort((a, b) => b.wickets - a.wickets)[0];
-
-  let result = "Match in progress";
-  if (match.winnerTeamId === "tie") {
-    result = `Tie at ${inningsOne.runs} runs each`;
-  } else if (match.winnerTeamId) {
-    const winner = teams[match.winnerTeamId].name;
-    if (inningsTwo.runs > inningsOne.runs) {
-      const battingTeam = teams[inningsTwo.battingTeamId];
-      const wicketsLeft = Math.max(0, battingTeam.players.length - 1 - inningsTwo.wickets);
-      result = `${winner} won by ${wicketsLeft} wicket${wicketsLeft === 1 ? "" : "s"}`;
-    } else {
-      const margin = inningsOne.runs - inningsTwo.runs;
-      result = `${winner} won by ${margin} run${margin === 1 ? "" : "s"}`;
-    }
-  }
-
-  const chaseTarget = inningsOne.runs + 1;
-  const highlight = match.currentInnings === 2
-    ? `${teams[inningsTwo.battingTeamId].name} need ${Math.max(0, chaseTarget - inningsTwo.runs)} from ${toOvers(Math.max(0, match.oversLimit * 6 - inningsTwo.legalBalls))} overs remaining.`
-    : `${teams[inningsOne.battingTeamId].name} posted ${inningsOne.runs}/${inningsOne.wickets} in ${toOvers(inningsOne.legalBalls)} overs.`;
-
-  return {
-    result,
-    topBatter: topBatterCandidate?.runs ? topBatterCandidate : undefined,
-    topBowler: topBowlerCandidate?.wickets ? topBowlerCandidate : undefined,
-    highlight,
-  };
-}
 
 export function finalizeMatchState(match: Match) {
   const innings = match.innings[match.currentInnings - 1];
@@ -545,6 +526,68 @@ export function finalizeMatchState(match: Match) {
 
   match.summary = buildSummary(match);
 }
+
+function buildSummary(match: Match): MatchSummary {
+  const inningsOne = match.innings[0];
+  const inningsTwo = match.innings[1];
+
+  const topBatter = [match.teamA, match.teamB]
+    .flatMap((team) =>
+      team.players.map((player) => ({
+        id: player.id,
+        name: player.name,
+        runs: (match.innings[0].batsmen[player.id]?.runs ?? 0) + (match.innings[1].batsmen[player.id]?.runs ?? 0),
+      })),
+    )
+    .sort((a, b) => b.runs - a.runs)[0];
+
+  const topBowler = [match.teamA, match.teamB]
+    .flatMap((team) =>
+      team.players.map((player) => ({
+        id: player.id,
+        name: player.name,
+        wickets: (match.innings[0].bowlers[player.id]?.wickets ?? 0) + (match.innings[1].bowlers[player.id]?.wickets ?? 0),
+        runs: (match.innings[0].bowlers[player.id]?.runs ?? 0) + (match.innings[1].bowlers[player.id]?.runs ?? 0),
+      })),
+    )
+    .sort((a, b) => b.wickets !== a.wickets ? b.wickets - a.wickets : a.runs - b.runs)[0];
+
+  // Calculate POTM (Simple weight: 1 wicket = 25 runs)
+  const potmCandidate = [match.teamA, match.teamB]
+    .flatMap(team => team.players.map(p => {
+      const r = (match.innings[0].batsmen[p.id]?.runs ?? 0) + (match.innings[1].batsmen[p.id]?.runs ?? 0);
+      const w = (match.innings[0].bowlers[p.id]?.wickets ?? 0) + (match.innings[1].bowlers[p.id]?.wickets ?? 0);
+      return { name: p.name, score: r + (w * 25) };
+    }))
+    .sort((a, b) => b.score - a.score)[0];
+
+  let result = "Match Draw";
+  if (match.winnerTeamId === "tie") {
+    result = "Match Tied";
+  } else if (match.winnerTeamId) {
+    const winner = getTeam(match, match.winnerTeamId);
+    if (match.winnerTeamId === match.battingFirstTeamId) {
+      const margin = inningsOne.runs - inningsTwo.runs;
+      result = `${winner.name} won by ${margin} ${margin === 1 ? "run" : "runs"}`;
+    } else {
+      const margin = 10 - inningsTwo.wickets;
+      result = `${winner.name} won by ${margin} ${margin === 1 ? "wicket" : "wickets"}`;
+    }
+  }
+
+  return {
+    result,
+    topBatter,
+    topBowler,
+    completedAt: new Date().toISOString(),
+    awards: {
+      potm: potmCandidate?.name,
+      bestBatter: topBatter?.name,
+      bestBowler: topBowler?.name,
+    }
+  };
+}
+
 
 export function createMatch(input: MatchCreateInput): Match {
   const teamA = createTeam("A", input.teamAName, input.teamAPlayers);
