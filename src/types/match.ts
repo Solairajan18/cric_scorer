@@ -113,8 +113,22 @@ export type MatchSummary = {
   };
 };
 
+export type MatchSummary = {
+  result?: string;
+  topBatter?: { id: string; name: string; runs: number };
+  topBowler?: { id: string; name: string; wickets: number; runs: number };
+  completedAt?: string;
+  awards?: {
+    potm?: string;
+    bestBatter?: string;
+    bestBowler?: string;
+    bestFielder?: string;
+  };
+};
+
 export type Match = {
   id: string;
+
   userId?: string;
   createdAt: number;
 
