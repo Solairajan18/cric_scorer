@@ -40,7 +40,8 @@ function getDetailedDismissal(match: Match, event: BallEvent) {
     case "hit_wicket": return `hit wicket b ${bowlerName}`;
     case "retired_hurt": return `retired hurt`;
     case "retired_out": return `retired out`;
-    default: return type.replace("_", " ");
+    default: return (type as string).replace("_", " ");
+
   }
 }
 
