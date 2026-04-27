@@ -13,7 +13,9 @@ import {
   Team,
   TeamKey,
   WicketKind,
+  MatchRules,
 } from "@/types/match";
+
 
 const STORAGE_PREFIX = "cric-scorer:match:";
 
